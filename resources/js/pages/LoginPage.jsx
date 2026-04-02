@@ -17,5 +17,9 @@ export function LoginPage() {
         navigate(defaultHomePath(authUser), { replace: true });
     };
 
-    return <AuthForm onAuthSuccess={handleAuthSuccess} onError={setError} />;
+    return (
+        <div className="grid min-h-full flex-1 place-items-center py-4 md:py-8">
+            <AuthForm onAuthSuccess={handleAuthSuccess} onError={setError} />
+        </div>
+    );
 }

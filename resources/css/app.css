@@ -12,3 +12,63 @@
         font-family: 'Manrope', 'Segoe UI', Tahoma, sans-serif;
     }
 }
+
+.wrs_modal_dialogContainer.wrs_modal_desktop {
+    box-sizing: border-box;
+    max-width: calc(100vw - 2rem);
+    max-height: calc(100vh - 2rem);
+}
+
+.wrs_modal_wrapper.wrs_modal_desktop,
+.wrs_content_container.wrs_modal_desktop {
+    min-height: 0;
+}
+
+.wrs_modal_wrapper.wrs_modal_desktop {
+    height: calc(100% - 12px);
+}
+
+.wrs_content_container.wrs_modal_desktop {
+    height: 100% !important;
+    overflow: auto !important;
+}
+
+.wrs_content_container.wrs_modal_desktop > div:first-child,
+.wrs_editor {
+    min-height: 0;
+    height: 100%;
+}
+
+.wrs_content_container.wrs_modal_desktop > div:first-child {
+    overflow: auto;
+}
+
+.wrs_panelContainer {
+    height: 150px !important;
+    direction: ltr !important;
+}
+
+.wrs_editor,
+.wrs_formulaDisplay,
+.wrs_content_container.wrs_modal_desktop {
+    direction: ltr !important;
+}
+
+.rich-content math {
+    vertical-align: middle;
+}
+
+.rich-content math annotation,
+.rich-content math annotation-xml {
+    display: none;
+}
+
+.rich-content img.Wirisformula,
+.rich-content img[class*='Wirisformula'] {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 0.125rem;
+    border: 0;
+    border-radius: 0;
+    max-width: none;
+}

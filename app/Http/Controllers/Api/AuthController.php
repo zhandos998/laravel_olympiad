@@ -57,7 +57,7 @@ class AuthController extends Controller
         $user = User::where('email', $data['email'])->first();
 
         if (!$user || !Hash::check($data['password'], $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 422);
+            return response()->json(['message' => __('messages.invalid_credentials')], 422);
         }
 
         $token = $user->createToken('auth-token')->plainTextToken;
@@ -72,7 +72,7 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()?->delete();
 
-        return response()->json(['message' => 'Logged out']);
+        return response()->json(['message' => __('messages.logged_out')]);
     }
 
     public function me(Request $request)
@@ -84,18 +84,36 @@ class AuthController extends Controller
     {
         $data = $request->validate([
             'olympiad_id' => ['required', 'integer', Rule::exists('olympiads', 'id')],
+            'test_language' => ['required', Rule::in(User::TEST_LANGUAGES)],
+            'profile_subjects' => ['required', Rule::in(User::PROFILE_SUBJECTS)],
         ]);
 
         $olympiad = Olympiad::findOrFail($data['olympiad_id']);
 
         if (!$olympiad->registration_open) {
-            return response()->json(['message' => 'Registration for this olympiad is closed'], 422);
+            return response()->json(['message' => __('messages.registration_closed')], 422);
         }
 
-        $registration = OlympiadRegistration::firstOrCreate(
-            ['olympiad_id' => $olympiad->id, 'user_id' => $request->user()->id],
-            ['registered_at' => now(), 'current_status' => 'registered']
-        );
+        $user = $request->user();
+
+        $user->forceFill([
+            'test_language' => $data['test_language'],
+            'profile_subjects' => $data['profile_subjects'],
+        ])->save();
+
+        $registration = OlympiadRegistration::firstOrNew([
+            'olympiad_id' => $olympiad->id,
+            'user_id' => $user->id,
+        ]);
+
+        if (!$registration->exists) {
+            $registration->registered_at = now();
+            $registration->current_status = 'registered';
+        }
+
+        $registration->test_language = $data['test_language'];
+        $registration->profile_subjects = $data['profile_subjects'];
+        $registration->save();
 
         return response()->json($registration, $registration->wasRecentlyCreated ? 201 : 200);
     }

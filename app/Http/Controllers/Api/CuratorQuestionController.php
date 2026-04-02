@@ -11,11 +11,48 @@ use Illuminate\Validation\ValidationException;
 
 class CuratorQuestionController extends Controller
 {
+    public function subjects(Request $request)
+    {
+        $user = $request->user();
+
+        return Subject::query()
+            ->when(!$user->isAdmin(), fn ($query) => $query->whereHas('curators', fn ($curators) => $curators->where('users.id', $user->id)))
+            ->withCount('questions')
+            ->with('olympiad:id,title')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Subject $subject) => [
+                'id' => $subject->id,
+                'name' => $subject->name,
+                'display_name' => $subject->display_name,
+                'language' => $subject->language,
+                'olympiad' => $subject->olympiad ? [
+                    'id' => $subject->olympiad->id,
+                    'title' => $subject->olympiad->title,
+                ] : null,
+                'questions_count' => $subject->questions_count,
+            ])
+            ->values();
+    }
+
     public function index(Request $request, Subject $subject)
     {
         $this->ensureCanManageSubject($request, $subject);
 
         return $subject->questions()->with('options')->latest()->get();
+    }
+
+    public function show(Request $request, Subject $subject, Question $question)
+    {
+        $this->ensureCanManageSubject($request, $subject);
+
+        if ($question->subject_id !== $subject->id) {
+            throw ValidationException::withMessages([
+                'question' => __('messages.question_does_not_belong'),
+            ]);
+        }
+
+        return $question->load('options');
     }
 
     public function store(Request $request, Subject $subject)
@@ -55,7 +92,7 @@ class CuratorQuestionController extends Controller
 
         if ($question->subject_id !== $subject->id) {
             throw ValidationException::withMessages([
-                'question' => 'Question does not belong to subject',
+                'question' => __('messages.question_does_not_belong'),
             ]);
         }
 
@@ -102,13 +139,13 @@ class CuratorQuestionController extends Controller
 
         if ($question->subject_id !== $subject->id) {
             throw ValidationException::withMessages([
-                'question' => 'Question does not belong to subject',
+                'question' => __('messages.question_does_not_belong'),
             ]);
         }
 
         $question->delete();
 
-        return response()->json(['message' => 'Question deleted']);
+        return response()->json(['message' => __('messages.question_deleted')]);
     }
 
     private function ensureCanManageSubject(Request $request, Subject $subject): void
@@ -122,7 +159,7 @@ class CuratorQuestionController extends Controller
         $isCurator = $subject->curators()->where('users.id', $user->id)->exists();
 
         if (!$isCurator) {
-            abort(403, 'You are not assigned to this subject');
+            abort(403, __('messages.not_assigned_to_subject'));
         }
     }
 
@@ -132,7 +169,7 @@ class CuratorQuestionController extends Controller
 
         if ($correctCount !== 1) {
             throw ValidationException::withMessages([
-                'options' => 'Exactly one option must be correct',
+                'options' => __('messages.exactly_one_correct_option'),
             ]);
         }
     }

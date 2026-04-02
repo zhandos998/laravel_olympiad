@@ -4,9 +4,11 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test:e2e": "npm run build && playwright test"
     },
     "devDependencies": {
+        "@playwright/test": "^1.54.2",
         "@tailwindcss/vite": "^4.0.0",
         "@vitejs/plugin-react": "^5.1.4",
         "axios": "^1.11.0",
@@ -16,6 +18,13 @@
         "vite": "^7.0.7"
     },
     "dependencies": {
-        "react-router-dom": "^7.13.1"
+        "@tinymce/tinymce-react": "^6.3.0",
+        "@wiris/mathtype-tinymce7": "^8.15.2",
+        "dompurify": "^3.3.3",
+        "react-markdown": "^10.1.0",
+        "react-router-dom": "^7.13.1",
+        "remark-gfm": "^4.0.1",
+        "tinymce": "^8.3.2",
+        "tinymce-i18n": "^26.2.16"
     }
 }

@@ -1,15 +1,17 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
 import { defaultHomePath } from '../../lib/navigation';
 
 export function ProtectedRoute({ allow, children }) {
     const { user, loading } = useAuth();
+    const { t } = useLocale();
 
     if (loading) {
         return (
             <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                Loading...
+                {t('common.loading')}
             </div>
         );
     }

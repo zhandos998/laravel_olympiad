@@ -1,32 +1,37 @@
-import React, { useState } from 'react';
-import { PROFILE_SUBJECTS, TEST_LANGUAGES } from '../../constants/registration';
-import { ui } from '../../constants/ui';
-import { api } from '../../lib/api';
+import React, { useState } from "react";
+import { PROFILE_SUBJECTS, TEST_LANGUAGES } from "../../constants/registration";
+import { ui } from "../../constants/ui";
+import { useLocale } from "../../context/LocaleContext";
+import { api } from "../../lib/api";
 
 export function AuthForm({ onAuthSuccess, onError }) {
-    const [mode, setMode] = useState('login');
+    const { t } = useLocale();
+    const [mode, setMode] = useState("login");
     const [form, setForm] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        region: '',
-        city: '',
-        school: '',
-        test_language: 'kaz',
+        name: "",
+        email: "",
+        phone: "",
+        region: "",
+        city: "",
+        school: "",
+        test_language: "kaz",
         profile_subjects: PROFILE_SUBJECTS[0].value,
-        password: '',
-        password_confirmation: '',
+        password: "",
+        password_confirmation: "",
     });
 
     const submit = async (event) => {
         event.preventDefault();
-        onError('');
+        onError("");
 
         try {
-            const data = await api(mode === 'login' ? '/auth/login' : '/auth/register', {
-                method: 'POST',
-                body: form,
-            });
+            const data = await api(
+                mode === "login" ? "/auth/login" : "/auth/register",
+                {
+                    method: "POST",
+                    body: form,
+                }
+            );
 
             onAuthSuccess(data.token, data.user);
         } catch (error) {
@@ -35,104 +40,149 @@ export function AuthForm({ onAuthSuccess, onError }) {
     };
 
     return (
-        <section className={`${ui.card} mx-auto w-full max-w-3xl`}>
+        <section
+            className={[
+                ui.card,
+                "mx-auto w-full",
+                mode === "login" ? "max-w-md" : "max-w-xl",
+            ].join(" ")}
+        >
             <div className="mb-4">
-                <h2 className="text-xl font-bold text-slate-900">{mode === 'login' ? 'Login' : 'Student Registration'}</h2>
-                <p className="text-sm text-slate-600">Use your account to access olympiad testing.</p>
+                <h2 className="text-xl font-bold text-slate-900">
+                    {mode === "login" ? t("auth.loginTitle") : t("auth.registerTitle")}
+                </h2>
+                <p className="text-sm text-slate-600">
+                    {t("auth.subtitle")}
+                </p>
             </div>
 
-            <form onSubmit={submit} className="grid gap-3 md:grid-cols-2">
-                {mode === 'register' && (
+            <form onSubmit={submit} className="grid gap-3">
+                {mode === "register" && (
                     <input
-                        className={`${ui.input} md:col-span-2`}
-                        placeholder="Full name"
+                        className={ui.input}
+                        placeholder={t("auth.fullName")}
                         value={form.name}
-                        onChange={(event) => setForm({ ...form, name: event.target.value })}
+                        onChange={(event) =>
+                            setForm({ ...form, name: event.target.value })
+                        }
                     />
                 )}
 
                 <input
                     className={ui.input}
-                    placeholder="Email"
+                    data-testid="login-email"
+                    placeholder={t("auth.email")}
                     value={form.email}
-                    onChange={(event) => setForm({ ...form, email: event.target.value })}
+                    onChange={(event) =>
+                        setForm({ ...form, email: event.target.value })
+                    }
                 />
                 <input
                     className={ui.input}
                     type="password"
-                    placeholder="Password"
+                    data-testid="login-password"
+                    placeholder={t("auth.password")}
                     value={form.password}
-                    onChange={(event) => setForm({ ...form, password: event.target.value })}
+                    onChange={(event) =>
+                        setForm({ ...form, password: event.target.value })
+                    }
                 />
 
-                {mode === 'register' && (
+                {mode === "register" && (
                     <>
                         <input
                             className={ui.input}
-                            placeholder="Phone"
+                            placeholder={t("auth.phone")}
                             value={form.phone}
-                            onChange={(event) => setForm({ ...form, phone: event.target.value })}
+                            onChange={(event) =>
+                                setForm({ ...form, phone: event.target.value })
+                            }
                         />
                         <input
                             className={ui.input}
-                            placeholder="Region"
+                            placeholder={t("auth.region")}
                             value={form.region}
-                            onChange={(event) => setForm({ ...form, region: event.target.value })}
+                            onChange={(event) =>
+                                setForm({ ...form, region: event.target.value })
+                            }
                         />
                         <input
                             className={ui.input}
-                            placeholder="City"
+                            placeholder={t("auth.city")}
                             value={form.city}
-                            onChange={(event) => setForm({ ...form, city: event.target.value })}
+                            onChange={(event) =>
+                                setForm({ ...form, city: event.target.value })
+                            }
                         />
                         <input
                             className={ui.input}
-                            placeholder="School"
+                            placeholder={t("auth.school")}
                             value={form.school}
-                            onChange={(event) => setForm({ ...form, school: event.target.value })}
+                            onChange={(event) =>
+                                setForm({ ...form, school: event.target.value })
+                            }
                         />
                         <select
                             className={ui.input}
                             value={form.test_language}
-                            onChange={(event) => setForm({ ...form, test_language: event.target.value })}
+                            onChange={(event) =>
+                                setForm({
+                                    ...form,
+                                    test_language: event.target.value,
+                                })
+                            }
                         >
                             {TEST_LANGUAGES.map((item) => (
                                 <option key={item.value} value={item.value}>
-                                    Test language: {item.label}
+                                    {t("auth.testLanguage")}: {t(item.labelKey)}
                                 </option>
                             ))}
                         </select>
                         <select
                             className={ui.input}
                             value={form.profile_subjects}
-                            onChange={(event) => setForm({ ...form, profile_subjects: event.target.value })}
+                            onChange={(event) =>
+                                setForm({
+                                    ...form,
+                                    profile_subjects: event.target.value,
+                                })
+                            }
                         >
                             {PROFILE_SUBJECTS.map((item) => (
                                 <option key={item.value} value={item.value}>
-                                    Profile: {item.label}
+                                    {t("auth.profileSubjects")}: {t(item.labelKey)}
                                 </option>
                             ))}
                         </select>
                         <input
-                            className={`${ui.input} md:col-span-2`}
+                            className={ui.input}
                             type="password"
-                            placeholder="Confirm Password"
+                            placeholder={t("auth.confirmPassword")}
                             value={form.password_confirmation}
-                            onChange={(event) => setForm({ ...form, password_confirmation: event.target.value })}
+                            onChange={(event) =>
+                                setForm({
+                                    ...form,
+                                    password_confirmation: event.target.value,
+                                })
+                            }
                         />
                     </>
                 )}
 
-                <div className="md:col-span-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <button className={ui.primaryButton} type="submit">
-                        {mode === 'login' ? 'Login' : 'Create account'}
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <button className={ui.primaryButton} data-testid="auth-submit" type="submit">
+                        {mode === "login" ? t("auth.loginAction") : t("auth.registerAction")}
                     </button>
                     <button
                         className={ui.linkButton}
                         type="button"
-                        onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+                        onClick={() =>
+                            setMode(mode === "login" ? "register" : "login")
+                        }
                     >
-                        {mode === 'login' ? 'No account? Register' : 'Have account? Login'}
+                        {mode === "login"
+                            ? t("auth.switchToRegister")
+                            : t("auth.switchToLogin")}
                     </button>
                 </div>
             </form>
