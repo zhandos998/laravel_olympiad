@@ -5,7 +5,7 @@ This project includes a production-oriented Docker setup with:
 - `app`: Laravel running on PHP-FPM
 - `nginx`: public web server
 - `queue-worker`: Laravel queue worker for async jobs and proctoring assembly
-- `mysql`: primary database
+- `postgres`: primary database
 - `redis`: cache and queue backend
 
 ## 1. Prepare env
