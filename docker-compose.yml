@@ -11,6 +11,7 @@ services:
       APP_DEBUG: ${APP_DEBUG:-false}
       APP_KEY: ${APP_KEY}
       APP_URL: ${APP_URL:-http://localhost:8080}
+      ASSET_URL: ${ASSET_URL:-}
       APP_LOCALE: ${APP_LOCALE:-rus}
       APP_FALLBACK_LOCALE: ${APP_FALLBACK_LOCALE:-rus}
       LOG_CHANNEL: ${LOG_CHANNEL:-stack}
@@ -56,6 +57,7 @@ services:
       APP_DEBUG: ${APP_DEBUG:-false}
       APP_KEY: ${APP_KEY}
       APP_URL: ${APP_URL:-http://localhost:8080}
+      ASSET_URL: ${ASSET_URL:-}
       APP_LOCALE: ${APP_LOCALE:-rus}
       APP_FALLBACK_LOCALE: ${APP_FALLBACK_LOCALE:-rus}
       LOG_CHANNEL: ${LOG_CHANNEL:-stack}
@@ -100,7 +102,7 @@ services:
     image: laravel-olympiad-nginx:latest
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "127.0.0.1:${APP_PORT:-8080}:80"
     depends_on:
       app:
         condition: service_started

@@ -48,6 +48,55 @@ By default:
 http://127.0.0.1:8080
 ```
 
+For a server deployment behind a host Nginx reverse proxy, keep Docker bound to
+`127.0.0.1:${APP_PORT}` and point your domain to the host server. Recommended
+`.env.docker` values:
+
+```env
+APP_URL=https://olympiad-test.atu.kz
+ASSET_URL=https://olympiad-test.atu.kz
+APP_PORT=8080
+SANCTUM_STATEFUL_DOMAINS=olympiad-test.atu.kz
+SESSION_SECURE_COOKIE=true
+```
+
+Example host Nginx server block:
+
+```nginx
+server {
+    listen 80;
+    server_name olympiad-test.atu.kz;
+
+    client_max_body_size 120m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 3600;
+    }
+}
+```
+
+After editing the host Nginx config:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+If SSL is terminated on the host Nginx, keep Laravel proxy-aware settings
+enabled and rebuild the Docker Nginx image after config changes:
+
+```bash
+docker compose --env-file .env.docker up -d --build nginx app queue-worker
+```
+
 ## 5. Queue worker
 
 The queue worker runs as a separate container:
