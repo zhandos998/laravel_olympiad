@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { curatorCopy } from '../components/curator/curatorShared';
+import { PageHero } from '../components/layout/PageHero';
 import { ui } from '../constants/ui';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../context/LocaleContext';
@@ -39,44 +40,56 @@ export function CuratorPage() {
         );
     }
 
-    if (subjects.length === 0) {
-        return (
-            <section className={ui.card}>
-                <h2 className="text-xl font-bold">{t('curator.title')}</h2>
-                <p className="mt-1 text-sm text-slate-600">{text.noAssignedSubjects}</p>
-            </section>
-        );
-    }
-
     return (
         <section className="grid gap-5">
-            <div className={ui.card}>
-                <h2 className="text-xl font-bold">{t('curator.title')}</h2>
-                <p className="mt-1 text-sm text-slate-600">{text.subtitle}</p>
-            </div>
+            <PageHero
+                eyebrow={t('header.badge')}
+                title={t('curator.title')}
+                description={text.subtitle}
+                aside={
+                    <div className={ui.metricCard}>
+                        <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6d82b2]">{text.assignedSubjects}</p>
+                        <p className="mt-2 text-3xl font-extrabold text-[#27498c]">{subjects.length}</p>
+                    </div>
+                }
+            />
 
-            <section className={ui.card}>
-                <h3 className="text-sm font-bold uppercase tracking-wide text-slate-600">{text.assignedSubjects}</h3>
+            {subjects.length === 0 ? (
+                <section className={ui.card}>
+                    <p className="text-sm text-slate-600">{text.noAssignedSubjects}</p>
+                </section>
+            ) : (
+                <section className={ui.card}>
+                    <h3 className="text-sm font-black uppercase tracking-[0.24em] text-[#6d82b2]">{text.assignedSubjects}</h3>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {subjects.map((subject) => (
-                        <div key={subject.id} data-testid={`curator-subject-${subject.id}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                            <p className="font-semibold text-slate-900">{subject.display_name ?? subject.name}</p>
-                            <p className="mt-1 text-sm text-slate-600">
-                                {text.olympiadLabel}: {subject.olympiad?.title ?? '-'}
-                            </p>
-                            <p className="mt-1 text-sm text-slate-600">
-                                {text.assignedQuestionCount}: {subject.questions_count ?? 0}
-                            </p>
-                            <div className="mt-4">
-                                <Link className={ui.primaryButton} data-testid={`curator-open-subject-${subject.id}`} to={`/curator/subjects/${subject.id}/questions`}>
-                                    {text.openSubject}
-                                </Link>
+                    <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {subjects.map((subject) => (
+                            <div key={subject.id} data-testid={`curator-subject-${subject.id}`} className={`${ui.block} relative overflow-hidden`}>
+                                <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-full bg-[#d7e3fb]/70 blur-2xl" />
+
+                                <div className="relative">
+                                    <p className="text-lg font-bold text-slate-900">{subject.display_name ?? subject.name}</p>
+
+                                    <div className="mt-4 grid gap-2 rounded-[1.2rem] border border-[#e4ecfc] bg-white px-4 py-4">
+                                        <p className="text-sm text-slate-600">
+                                            {text.olympiadLabel}: {subject.olympiad?.title ?? '-'}
+                                        </p>
+                                        <p className="text-sm text-slate-600">
+                                            {text.assignedQuestionCount}: {subject.questions_count ?? 0}
+                                        </p>
+                                    </div>
+
+                                    <div className="mt-4">
+                                        <Link className={ui.primaryButton} data-testid={`curator-open-subject-${subject.id}`} to={`/curator/subjects/${subject.id}/questions`}>
+                                            {text.openSubject}
+                                        </Link>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
+                        ))}
+                    </div>
+                </section>
+            )}
         </section>
     );
 }

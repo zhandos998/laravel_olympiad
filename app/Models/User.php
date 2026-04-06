@@ -57,6 +57,16 @@ class User extends Authenticatable
         return $this->hasMany(OlympiadRegistration::class);
     }
 
+    public function feedback()
+    {
+        return $this->hasMany(Feedback::class);
+    }
+
+    public function feedbackReplies()
+    {
+        return $this->hasMany(Feedback::class, 'replied_by');
+    }
+
     public function curatedSubjects()
     {
         return $this->belongsToMany(Subject::class, 'subject_curators');

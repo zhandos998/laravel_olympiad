@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\AssembleProctoringRecording;
 use App\Models\Olympiad;
 use App\Models\OlympiadRegistration;
 use App\Models\ProctoringChunk;
@@ -15,6 +16,7 @@ use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -283,6 +285,7 @@ class SubjectStageOneQuestionCountTest extends TestCase
     public function test_student_can_start_upload_and_finish_proctoring_session(): void
     {
         Storage::fake('local');
+        Queue::fake();
 
         $student = User::factory()->create([
             'role' => 'student',
@@ -353,12 +356,18 @@ class SubjectStageOneQuestionCountTest extends TestCase
         $this->postJson("/api/student/proctoring-sessions/{$sessionId}/finish")
             ->assertOk()
             ->assertJsonPath('status', 'finished')
+            ->assertJsonPath('assembly_status', 'queued')
             ->assertJsonPath('combined_chunks_count', 1)
             ->assertJsonPath('combined_recording_available', false);
+
+        Queue::assertPushed(AssembleProctoringRecording::class, function (AssembleProctoringRecording $job) use ($sessionId) {
+            return $job->sessionId === $sessionId;
+        });
 
         $this->assertDatabaseHas('proctoring_sessions', [
             'id' => $sessionId,
             'status' => 'finished',
+            'assembly_status' => 'queued',
         ]);
         $this->assertDatabaseMissing('proctoring_recordings', [
             'proctoring_session_id' => $sessionId,
@@ -506,12 +515,15 @@ class SubjectStageOneQuestionCountTest extends TestCase
             'stage1_question_count' => 25,
             'stage1_duration_minutes' => 90,
             'stage1_pass_percent' => 70,
+            'stage2_starts_at' => '2026-03-13 10:00:00',
+            'stage2_ends_at' => '2026-03-13 12:00:00',
         ]);
         $mathKaz = Subject::create([
             'olympiad_id' => $olympiad->id,
             'name' => 'Mathematics',
             'language' => 'kaz',
             'stage1_question_count' => 25,
+            'stage2_link' => 'https://example.com/math-stage-two',
         ]);
         $mathRus = Subject::create([
             'olympiad_id' => $olympiad->id,
@@ -550,6 +562,12 @@ class SubjectStageOneQuestionCountTest extends TestCase
             'started_at' => now(),
             'submitted_at' => now(),
         ]);
+        StageTwoSession::create([
+            'olympiad_registration_id' => $registration->id,
+            'subject_id' => $mathKaz->id,
+            'status' => 'scheduled',
+            'meeting_link' => 'https://example.com/math-stage-two',
+        ]);
 
         Sanctum::actingAs($student);
 
@@ -557,12 +575,18 @@ class SubjectStageOneQuestionCountTest extends TestCase
             ->assertOk()
             ->assertJsonPath('olympiad.id', $olympiad->id)
             ->assertJsonPath('olympiad.stage1_duration_minutes', 90)
+            ->assertJsonPath('olympiad.stage2_starts_at', '2026-03-13T10:00:00.000000Z')
+            ->assertJsonPath('olympiad.stage2_ends_at', '2026-03-13T12:00:00.000000Z')
             ->assertJsonPath('registration.current_status', 'registered')
             ->assertJsonPath('registration.test_language', 'kaz')
             ->assertJsonCount(2, 'subjects')
             ->assertJsonPath('subjects.0.id', $mathKaz->id)
             ->assertJsonPath('subjects.0.stage1_attempt.status', 'completed')
             ->assertJsonPath('subjects.0.stage1_attempt.score_percent', 72)
+            ->assertJsonPath('subjects.0.stage2.eligible', true)
+            ->assertJsonPath('subjects.0.stage2.status', 'scheduled')
+            ->assertJsonPath('subjects.0.stage2.meeting_link', 'https://example.com/math-stage-two')
+            ->assertJsonPath('subjects.0.stage2.starts_at', '2026-03-13T10:00:00.000000Z')
             ->assertJsonPath('subjects.1.id', $informaticsKaz->id);
 
         $this->assertDatabaseHas('subjects', ['id' => $mathRus->id, 'language' => 'rus']);

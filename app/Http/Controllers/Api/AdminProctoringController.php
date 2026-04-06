@@ -45,8 +45,12 @@ class AdminProctoringController extends Controller
                         'id' => $session->id,
                         'stage' => $session->stage,
                         'status' => $session->status,
+                        'assembly_status' => $session->assembly_status,
+                        'assembly_error' => $session->assembly_error,
                         'started_at' => $session->started_at,
                         'finished_at' => $session->finished_at,
+                        'assembly_requested_at' => $session->assembly_requested_at,
+                        'assembly_completed_at' => $session->assembly_completed_at,
                         'combined_chunks' => $combinedChunks->map(function ($chunk) {
                             return [
                                 'id' => $chunk->id,

@@ -1,146 +1,35 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { AdminOlympiadPageFrame } from '../components/admin/AdminOlympiadPageFrame';
 import { AdminParticipantsTab } from '../components/admin/AdminParticipantsTab';
 import { AdminProctoringModal } from '../components/admin/AdminProctoringModal';
 import { AdminResultsTab } from '../components/admin/AdminResultsTab';
-import { AdminOlympiadSettings } from '../components/admin/AdminOlympiadSettings';
-import { AdminOlympiadSubjects } from '../components/admin/AdminOlympiadSubjects';
 import { AdminStageTwoTab } from '../components/admin/AdminStageTwoTab';
-import { SummaryCard } from '../components/admin/AdminUi';
-import { adminOlympiadCopy } from '../components/admin/adminOlympiadCopy';
-import { downloadCsv, parseOptionalPercent, parsePositiveInteger, toDateTimeInputValue } from '../components/admin/adminOlympiadUtils';
+import { downloadCsv, parseOptionalPercent } from '../components/admin/adminOlympiadUtils';
 import { PROFILE_SUBJECTS, TEST_LANGUAGES } from '../constants/registration';
 import { ui } from '../constants/ui';
-import { useAuth } from '../context/AuthContext';
-import { useConfirm } from '../context/ConfirmContext';
-import { useLocale } from '../context/LocaleContext';
-import { useNotification } from '../context/NotificationContext';
+import { useAdminOlympiadDashboard } from '../hooks/useAdminOlympiadDashboard';
 import { api } from '../lib/api';
 
 export function AdminOlympiadPage() {
-    const { olympiadId } = useParams();
-    const { pathname } = useLocation();
-    const { token, setError } = useAuth();
-    const { locale, t } = useLocale();
-    const { showNotification } = useNotification();
-    const { confirm } = useConfirm();
-    const [dashboard, setDashboard] = useState(null);
-    const [curators, setCurators] = useState([]);
-    const [subjectName, setSubjectName] = useState('');
-    const [subjectLanguage, setSubjectLanguage] = useState('');
-    const [subjectQuestionCount, setSubjectQuestionCount] = useState('25');
-    const [assignedUsers, setAssignedUsers] = useState({});
-    const [subjectLanguages, setSubjectLanguages] = useState({});
-    const [subjectQuestionCounts, setSubjectQuestionCounts] = useState({});
-    const [olympiadForm, setOlympiadForm] = useState({
-        title: '',
-        description: '',
-        registration_open: true,
-        is_active: true,
-        stage1_question_count: '25',
-        stage1_duration_minutes: '90',
-        stage1_pass_percent: '70',
-        stage1_starts_at: '',
-        stage1_ends_at: '',
-        stage2_starts_at: '',
-        stage2_ends_at: '',
-    });
-    const [stageTwoEdits, setStageTwoEdits] = useState({});
+    const { dashboard, loaded, locale, olympiad, olympiadId, participants, proctoringText, refreshDashboard, setError, showNotification, subjects, t, text, token } =
+        useAdminOlympiadDashboard();
     const [participantSearch, setParticipantSearch] = useState('');
     const [languageFilter, setLanguageFilter] = useState('all');
     const [profileFilter, setProfileFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [activeTab, setActiveTab] = useState('participants');
-    const [loaded, setLoaded] = useState(false);
+    const [stageTwoEdits, setStageTwoEdits] = useState({});
     const [proctoringViewer, setProctoringViewer] = useState({
         open: false,
         registrationId: null,
     });
 
-    const text = adminOlympiadCopy[locale] ?? adminOlympiadCopy.rus;
-    const subjectLanguageOptions = [
-        { value: '', label: locale === 'kaz' ? 'Тілсіз' : 'Без языка' },
-        { value: 'kaz', label: locale === 'kaz' ? 'Қазақша' : 'Казахский' },
-        { value: 'rus', label: locale === 'kaz' ? 'Орысша' : 'Русский' },
-    ];
-    const olympiad = dashboard?.olympiad ?? null;
-    const subjects = dashboard?.subjects ?? [];
-    const participants = dashboard?.participants ?? [];
-    const summary = dashboard?.summary ?? null;
-    const activeSection = pathname.endsWith('/settings') ? 'settings' : pathname.endsWith('/subjects') ? 'subjects' : 'overview';
-    const sectionLinks = [
-        { key: 'overview', label: text.overview, to: `/admin/olympiads/${olympiadId}` },
-        { key: 'settings', label: text.settings, to: `/admin/olympiads/${olympiadId}/settings` },
-        { key: 'subjects', label: text.subjects, to: `/admin/olympiads/${olympiadId}/subjects` },
-    ];
-    const proctoringText = useMemo(
-        () =>
-            locale === 'kaz'
-                ? {
-                      title: '\u041f\u0440\u043e\u043a\u0442\u043e\u0440\u0438\u043d\u0433',
-                      open: '\u0416\u0430\u0437\u0431\u0430\u043b\u0430\u0440',
-                      emptyShort: '\u0416\u043e\u049b',
-                  }
-                : {
-                      title: '\u041f\u0440\u043e\u043a\u0442\u043e\u0440\u0438\u043d\u0433',
-                      open: '\u0417\u0430\u043f\u0438\u0441\u0438',
-                      emptyShort: '\u041d\u0435\u0442',
-                  },
-        [locale],
-    );
-
-    const loadDashboard = () => {
-        api(`/admin/olympiads/${olympiadId}`, { token })
-            .then((data) => {
-                setDashboard(data);
-                setLoaded(true);
-            })
-            .catch((error) => {
-                setLoaded(true);
-                setError(error.message);
-            });
-    };
-
-    const loadCurators = () => {
-        api('/admin/users?role=curator', { token })
-            .then(setCurators)
-            .catch((error) => setError(error.message));
-    };
-
-    useEffect(() => {
-        loadDashboard();
-        loadCurators();
-    }, [olympiadId, token, setError]);
-
     useEffect(() => {
         if (!dashboard?.olympiad) {
-            setAssignedUsers({});
-            setSubjectLanguages({});
-            setSubjectQuestionCounts({});
             setStageTwoEdits({});
             return;
         }
 
-        setAssignedUsers(Object.fromEntries(subjects.map((subject) => [subject.id, String(subject.assigned_curator?.id ?? '')])));
-        setSubjectLanguages(Object.fromEntries(subjects.map((subject) => [subject.id, subject.language ?? ''])));
-        setSubjectQuestionCounts(
-            Object.fromEntries(subjects.map((subject) => [subject.id, String(subject.stage1_question_count ?? olympiad.stage1_question_count ?? 25)])),
-        );
-        setSubjectQuestionCount(String(olympiad.stage1_question_count ?? 25));
-        setSubjectLanguage('');
-        setOlympiadForm({
-            title: olympiad.title ?? '',
-            description: olympiad.description ?? '',
-            registration_open: Boolean(olympiad.registration_open),
-            is_active: Boolean(olympiad.is_active),
-            stage1_question_count: String(olympiad.stage1_question_count ?? 25),
-            stage1_duration_minutes: String(olympiad.stage1_duration_minutes ?? 90),
-            stage1_pass_percent: String(olympiad.stage1_pass_percent ?? 70),
-            stage1_starts_at: toDateTimeInputValue(olympiad.stage1_starts_at ?? olympiad.starts_at),
-            stage1_ends_at: toDateTimeInputValue(olympiad.stage1_ends_at ?? olympiad.ends_at),
-            stage2_starts_at: toDateTimeInputValue(olympiad.stage2_starts_at),
-            stage2_ends_at: toDateTimeInputValue(olympiad.stage2_ends_at),
-        });
         setStageTwoEdits(
             Object.fromEntries(
                 participants.flatMap((participant) =>
@@ -160,7 +49,7 @@ export function AdminOlympiadPage() {
                 ),
             ),
         );
-    }, [dashboard, olympiad, participants, subjects]);
+    }, [dashboard]);
 
     const languageLabel = (value) => {
         const item = TEST_LANGUAGES.find((entry) => entry.value === value);
@@ -227,164 +116,6 @@ export function AdminOlympiadPage() {
         [filteredParticipants],
     );
 
-    const createSubject = async () => {
-        if (!olympiad) {
-            return;
-        }
-
-        const trimmedSubjectName = subjectName.trim();
-        const parsedQuestionCount = parsePositiveInteger(subjectQuestionCount);
-
-        if (!trimmedSubjectName) {
-            setError(text.invalidSubjectName);
-            showNotification({ type: 'error', message: text.invalidSubjectName });
-            return;
-        }
-
-        if (parsedQuestionCount === null) {
-            setError(text.invalidQuestionCount);
-            showNotification({ type: 'error', message: text.invalidQuestionCount });
-            return;
-        }
-
-        try {
-            await api(`/admin/olympiads/${olympiad.id}/subjects`, {
-                method: 'POST',
-                token,
-                body: {
-                    name: trimmedSubjectName,
-                    language: subjectLanguage || null,
-                    stage1_question_count: parsedQuestionCount,
-                },
-            });
-
-            setSubjectName('');
-            setSubjectLanguage('');
-            setSubjectQuestionCount(String(olympiad.stage1_question_count ?? 25));
-            loadDashboard();
-            setError('');
-            showNotification({ type: 'success', message: text.subjectCreated });
-        } catch (error) {
-            setError(error.message);
-        }
-    };
-
-    const saveSubject = async (subjectId) => {
-        const parsedQuestionCount = parsePositiveInteger(subjectQuestionCounts[subjectId]);
-
-        if (parsedQuestionCount === null) {
-            setError(text.invalidQuestionCount);
-            showNotification({ type: 'error', message: text.invalidQuestionCount });
-            return;
-        }
-
-        try {
-            await api(`/admin/subjects/${subjectId}`, {
-                method: 'PATCH',
-                token,
-                body: {
-                    stage1_question_count: parsedQuestionCount,
-                    language: subjectLanguages[subjectId] || null,
-                    user_id: assignedUsers[subjectId] ? Number(assignedUsers[subjectId]) : null,
-                },
-            });
-
-            loadDashboard();
-            setError('');
-            showNotification({ type: 'success', message: text.subjectSaved });
-        } catch (error) {
-            setError(error.message);
-        }
-    };
-
-    const archiveSubject = async (subjectId) => {
-        const confirmed = await confirm({
-            title: text.archiveSubject,
-            message: text.archiveSubjectConfirm,
-            confirmText: text.archiveSubject,
-            tone: 'danger',
-        });
-
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            await api(`/admin/subjects/${subjectId}/archive`, {
-                method: 'PATCH',
-                token,
-            });
-
-            loadDashboard();
-            setError('');
-            showNotification({ type: 'success', message: text.subjectArchived });
-        } catch (error) {
-            setError(error.message);
-        }
-    };
-
-    const saveOlympiadSettings = async () => {
-        if (!olympiad) {
-            return;
-        }
-
-        const trimmedTitle = olympiadForm.title.trim();
-        const parsedQuestionCount = parsePositiveInteger(olympiadForm.stage1_question_count);
-        const parsedDurationMinutes = parsePositiveInteger(olympiadForm.stage1_duration_minutes, 300);
-        const parsedPassPercent = parsePositiveInteger(olympiadForm.stage1_pass_percent);
-
-        if (!trimmedTitle) {
-            setError(text.invalidOlympiadTitle);
-            showNotification({ type: 'error', message: text.invalidOlympiadTitle });
-            return;
-        }
-
-        if (parsedQuestionCount === null) {
-            setError(text.invalidQuestionCount);
-            showNotification({ type: 'error', message: text.invalidQuestionCount });
-            return;
-        }
-
-        if (parsedDurationMinutes === null) {
-            const durationMessage = locale === 'kaz' ? '1 кезең уақыты 1 мен 300 минут аралығында болуы керек.' : 'Время 1 тура должно быть от 1 до 300 минут.';
-            setError(durationMessage);
-            showNotification({ type: 'error', message: durationMessage });
-            return;
-        }
-
-        if (parsedPassPercent === null) {
-            setError(text.invalidPassPercent);
-            showNotification({ type: 'error', message: text.invalidPassPercent });
-            return;
-        }
-
-        try {
-            const data = await api(`/admin/olympiads/${olympiad.id}`, {
-                method: 'PATCH',
-                token,
-                body: {
-                    title: trimmedTitle,
-                    description: olympiadForm.description.trim(),
-                    registration_open: olympiadForm.registration_open,
-                    is_active: olympiadForm.is_active,
-                    stage1_question_count: parsedQuestionCount,
-                    stage1_duration_minutes: parsedDurationMinutes,
-                    stage1_pass_percent: parsedPassPercent,
-                    stage1_starts_at: olympiadForm.stage1_starts_at || null,
-                    stage1_ends_at: olympiadForm.stage1_ends_at || null,
-                    stage2_starts_at: olympiadForm.stage2_starts_at || null,
-                    stage2_ends_at: olympiadForm.stage2_ends_at || null,
-                },
-            });
-
-            setDashboard(data);
-            setError('');
-            showNotification({ type: 'success', message: text.olympiadSaved });
-        } catch (error) {
-            setError(error.message);
-        }
-    };
-
     const saveStageTwo = async (row) => {
         const edit = stageTwoEdits[row.key] ?? {
             status: row.stage2Status,
@@ -418,7 +149,7 @@ export function AdminOlympiadPage() {
                 },
             });
 
-            loadDashboard();
+            await refreshDashboard();
             setError('');
             showNotification({ type: 'success', message: text.stageTwoSaved });
         } catch (error) {
@@ -446,11 +177,12 @@ export function AdminOlympiadPage() {
         showNotification({ type: 'success', message: text.exportedParticipants });
     };
 
-    const exportResultsCsv = () => {
+    const exportResultsCsv = (participantsForExport) => {
         downloadCsv(`results-olympiad-${olympiadId}.csv`, [
             [text.participantName, text.status, ...subjects.flatMap((subject) => [`${subject.display_name ?? subject.name} ${text.stageOne}`, `${subject.display_name ?? subject.name} ${text.stageTwo}`, `${subject.display_name ?? subject.name} ${text.total}`]), text.overallScore],
-            ...filteredParticipants.map((participant) => {
+            ...participantsForExport.map((participant) => {
                 const resultMap = new Map(participant.subject_results.map((result) => [result.subject_id, result]));
+
                 return [
                     participant.user.name,
                     statusLabel(participant.current_status),
@@ -483,105 +215,25 @@ export function AdminOlympiadPage() {
         });
     };
 
-    if (loaded && !olympiad) {
-        return (
-            <section className={ui.card}>
-                <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm text-slate-600">{text.olympiadNotFound}</p>
-                    <Link className={ui.secondaryButton} to="/admin">
-                        {text.backToOlympiads}
-                    </Link>
-                </div>
-            </section>
-        );
-    }
-
-    if (!olympiad) {
-        return (
-            <section className={ui.card}>
-                <p className="text-sm text-slate-600">{text.testingAdmin}...</p>
-            </section>
-        );
-    }
-
     return (
-        <section className="grid gap-5">
-            <div className={ui.card}>
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h2 className="text-xl font-bold">{text.testingAdmin}</h2>
-                        <p className="mt-1 text-sm text-slate-600">{olympiad.title}</p>
-                    </div>
-                    <Link className={ui.secondaryButton} to="/admin">
-                        {text.backToOlympiads}
-                    </Link>
-                </div>
-
-                <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    <SummaryCard label={text.statsParticipants} value={summary?.participants_total ?? 0} />
-                    <SummaryCard label={text.statsSubjects} value={summary?.subjects_total ?? 0} />
-                    <SummaryCard label={text.statsReadySubjects} value={summary?.ready_subjects_total ?? 0} />
-                    <SummaryCard label={text.statsEliminated} value={summary?.eliminated_total ?? 0} />
-                    <SummaryCard label={text.statsStageTwo} value={summary?.stage2_total ?? 0} />
-                    <SummaryCard label={text.statsCompleted} value={summary?.completed_total ?? 0} />
-                </div>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-                    {sectionLinks.map((section) => (
-                        <Link key={section.key} className={activeSection === section.key ? ui.primaryButton : ui.secondaryButton} data-testid={`section-${section.key}`} to={section.to}>
-                            {section.label}
-                        </Link>
+        <AdminOlympiadPageFrame
+            currentSection="overview"
+            headerContent={
+                <div className="mt-3 flex flex-wrap gap-2">
+                    {['participants', 'results', 'stageTwo'].map((tab) => (
+                        <button key={tab} className={activeTab === tab ? ui.primaryButton : ui.secondaryButton} onClick={() => setActiveTab(tab)} type="button">
+                            {text[tab]}
+                        </button>
                     ))}
                 </div>
-
-                {activeSection === 'overview' && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                        {['participants', 'results', 'stageTwo'].map((tab) => (
-                            <button key={tab} className={activeTab === tab ? ui.primaryButton : ui.secondaryButton} onClick={() => setActiveTab(tab)}>
-                                {text[tab]}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {activeSection === 'settings' && (
-                <AdminOlympiadSettings
-                    text={text}
-                    locale={locale}
-                    t={t}
-                    olympiad={olympiad}
-                    olympiadForm={olympiadForm}
-                    setOlympiadForm={setOlympiadForm}
-                    saveOlympiadSettings={saveOlympiadSettings}
-                />
-            )}
-
-            {activeSection === 'subjects' && (
-                <AdminOlympiadSubjects
-                    text={text}
-                    subjectName={subjectName}
-                    setSubjectName={setSubjectName}
-                    subjectLanguage={subjectLanguage}
-                    setSubjectLanguage={setSubjectLanguage}
-                    subjectQuestionCount={subjectQuestionCount}
-                    setSubjectQuestionCount={setSubjectQuestionCount}
-                    createSubject={createSubject}
-                    subjects={subjects}
-                    subjectLanguages={subjectLanguages}
-                    setSubjectLanguages={setSubjectLanguages}
-                    subjectLanguageOptions={subjectLanguageOptions}
-                    subjectQuestionCounts={subjectQuestionCounts}
-                    setSubjectQuestionCounts={setSubjectQuestionCounts}
-                    assignedUsers={assignedUsers}
-                    setAssignedUsers={setAssignedUsers}
-                    curators={curators}
-                    saveSubject={saveSubject}
-                    archiveSubject={archiveSubject}
-                />
-            )}
-
-            {activeSection === 'overview' && activeTab === 'participants' && (
+            }
+            loaded={loaded}
+            olympiad={olympiad}
+            olympiadId={olympiadId}
+            summary={dashboard?.summary ?? null}
+            text={text}
+        >
+            {activeTab === 'participants' && (
                 <AdminParticipantsTab
                     text={text}
                     t={t}
@@ -604,11 +256,11 @@ export function AdminOlympiadPage() {
                 />
             )}
 
-            {activeSection === 'overview' && activeTab === 'results' && (
-                <AdminResultsTab text={text} subjects={subjects} filteredParticipants={filteredParticipants} exportResultsCsv={exportResultsCsv} statusLabel={statusLabel} />
+            {activeTab === 'results' && (
+                <AdminResultsTab text={text} subjects={subjects} participants={participants} exportResultsCsv={exportResultsCsv} statusLabel={statusLabel} />
             )}
 
-            {activeSection === 'overview' && activeTab === 'stageTwo' && (
+            {activeTab === 'stageTwo' && (
                 <AdminStageTwoTab
                     text={text}
                     stageTwoRows={stageTwoRows}
@@ -628,6 +280,6 @@ export function AdminOlympiadPage() {
                 registrationId={proctoringViewer.registrationId}
                 token={token}
             />
-        </section>
+        </AdminOlympiadPageFrame>
     );
 }

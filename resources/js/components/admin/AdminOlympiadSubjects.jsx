@@ -160,7 +160,7 @@ export function AdminOlympiadSubjects({
                                             ))}
                                         </select>
                                     ) : (
-                                        <p className="text-sm text-amber-700">{text.noCurators}</p>
+                                        <p className="text-sm text-slate-600">{text.noCurators}</p>
                                     )}
                                 </div>
 

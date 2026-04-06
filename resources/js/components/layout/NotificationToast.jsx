@@ -2,9 +2,9 @@ import React from 'react';
 import { useNotification } from '../../context/NotificationContext';
 
 const toneClasses = {
-    success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-    error: 'border-rose-200 bg-rose-50 text-rose-900',
-    info: 'border-sky-200 bg-sky-50 text-sky-900',
+    success: 'border-[#bfd0f4] bg-[#f7f9ff] text-[#355da8]',
+    error: 'border-[#355da8] bg-[#eef3ff] text-[#355da8]',
+    info: 'border-[#d7e3fb] bg-white text-[#355da8]',
 };
 
 export function NotificationToast() {

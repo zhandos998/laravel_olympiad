@@ -22,12 +22,12 @@ export const translations = {
             badge: 'Университетская олимпиада',
             title: 'Платформа тестирования',
             login: 'Вход',
-            student: 'Участник',
+            student: 'Пользователь',
             admin: 'Админ',
             curator: 'Составитель',
             language: 'Язык',
             role: {
-                student: 'участник',
+                student: 'пользователь',
                 admin: 'админ',
                 curator: 'составитель',
             },
@@ -38,7 +38,7 @@ export const translations = {
         },
         auth: {
             loginTitle: 'Вход',
-            registerTitle: 'Регистрация участника',
+            registerTitle: 'Регистрация пользователя',
             subtitle: 'Войдите в систему или создайте учетную запись для участия в олимпиаде.',
             fullName: 'ФИО',
             email: 'E-mail',
@@ -56,7 +56,7 @@ export const translations = {
             switchToLogin: 'Уже есть аккаунт? Войти',
         },
         student: {
-            title: 'Панель участника',
+            title: 'Панель пользователя',
             availableOlympiads: 'Доступные олимпиады',
             registration: 'Регистрация',
             enroll: 'Записаться',

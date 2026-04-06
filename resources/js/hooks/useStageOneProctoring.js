@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 import { deleteQueuedChunk, getNextQueuedSequence, isProctoringQueueSupported, listQueuedChunks, saveQueuedChunk } from '../lib/proctoringQueue';
 
-const CHUNK_INTERVAL_MS = 2000;
-const COMPOSITION_FPS = 20;
-const DEFAULT_CANVAS_WIDTH = 1280;
-const DEFAULT_CANVAS_HEIGHT = 720;
+const CHUNK_INTERVAL_MS = 12000;
+const COMPOSITION_FPS = 12;
+const DEFAULT_CANVAS_WIDTH = 960;
+const DEFAULT_CANVAS_HEIGHT = 540;
 const CAMERA_MARGIN = 24;
 const CAMERA_WIDTH_RATIO = 0.22;
-const CAMERA_MIN_WIDTH = 220;
-const CAMERA_MAX_WIDTH = 320;
+const CAMERA_MIN_WIDTH = 180;
+const CAMERA_MAX_WIDTH = 260;
 const CAMERA_RADIUS = 18;
 
 function buildCopy(locale) {

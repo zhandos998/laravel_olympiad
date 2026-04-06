@@ -1,0 +1,144 @@
+services:
+  app:
+    build:
+      context: .
+      target: runtime
+    image: laravel-olympiad-app:latest
+    restart: unless-stopped
+    environment:
+      APP_NAME: ${APP_NAME:-Laravel Olympiad}
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_LOCALE: ${APP_LOCALE:-rus}
+      APP_FALLBACK_LOCALE: ${APP_FALLBACK_LOCALE:-rus}
+      LOG_CHANNEL: ${LOG_CHANNEL:-stack}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-olympiad}
+      DB_USERNAME: ${DB_USERNAME:-olympiad}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      SESSION_DRIVER: ${SESSION_DRIVER:-redis}
+      SESSION_CONNECTION: ${SESSION_CONNECTION:-default}
+      CACHE_STORE: ${CACHE_STORE:-redis}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+      REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_CACHE_DB: ${REDIS_CACHE_DB:-1}
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+      FFMPEG_BINARY: ${FFMPEG_BINARY:-ffmpeg}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      MAIL_MAILER: ${MAIL_MAILER:-log}
+      SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-false}
+      SESSION_DOMAIN: ${SESSION_DOMAIN:-}
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:8080}
+    volumes:
+      - laravel_storage:/var/www/html/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  queue-worker:
+    image: laravel-olympiad-app:latest
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=1", "--timeout=1800"]
+    environment:
+      APP_NAME: ${APP_NAME:-Laravel Olympiad}
+      APP_ENV: ${APP_ENV:-production}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_KEY: ${APP_KEY}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_LOCALE: ${APP_LOCALE:-rus}
+      APP_FALLBACK_LOCALE: ${APP_FALLBACK_LOCALE:-rus}
+      LOG_CHANNEL: ${LOG_CHANNEL:-stack}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-olympiad}
+      DB_USERNAME: ${DB_USERNAME:-olympiad}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      SESSION_DRIVER: ${SESSION_DRIVER:-redis}
+      SESSION_CONNECTION: ${SESSION_CONNECTION:-default}
+      CACHE_STORE: ${CACHE_STORE:-redis}
+      QUEUE_CONNECTION: ${QUEUE_CONNECTION:-redis}
+      REDIS_CLIENT: ${REDIS_CLIENT:-phpredis}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_DB: ${REDIS_DB:-0}
+      REDIS_CACHE_DB: ${REDIS_CACHE_DB:-1}
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+      FFMPEG_BINARY: ${FFMPEG_BINARY:-ffmpeg}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      MAIL_MAILER: ${MAIL_MAILER:-log}
+      SESSION_SECURE_COOKIE: ${SESSION_SECURE_COOKIE:-false}
+      SESSION_DOMAIN: ${SESSION_DOMAIN:-}
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-localhost:8080}
+    volumes:
+      - laravel_storage:/var/www/html/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+  nginx:
+    build:
+      context: .
+      target: nginx
+    image: laravel-olympiad-nginx:latest
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    depends_on:
+      app:
+        condition: service_started
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-olympiad}
+      MYSQL_USER: ${DB_USERNAME:-olympiad}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root-secret}
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --innodb-flush-log-at-trx-commit=2
+      - --sync-binlog=0
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis_data:/data
+
+volumes:
+  laravel_storage:
+  mysql_data:
+  redis_data:

@@ -58,7 +58,7 @@ export function ConfirmProvider({ children }) {
     const titleText = dialog?.title ?? (locale === 'kaz' ? '\u0420\u0430\u0441\u0442\u0430\u0443' : '\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435');
     const confirmButtonClass =
         dialog?.tone === 'danger'
-            ? 'inline-flex min-h-11 items-center justify-center rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-black transition hover:bg-red-700'
+            ? 'inline-flex min-h-11 items-center justify-center rounded-2xl bg-[#27498c] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f3c75]'
             : `${ui.primaryButton} inline-flex min-h-11 items-center justify-center`;
 
     return (
@@ -72,12 +72,12 @@ export function ConfirmProvider({ children }) {
                 >
                     <div
                         aria-modal="true"
-                        className="w-full max-w-md rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_30px_80px_-35px_rgba(15,23,42,0.45)] md:p-6"
+                        className="w-full max-w-md rounded-[1.75rem] border border-[#d7e3fb] bg-white p-5 shadow-[0_30px_80px_-35px_rgba(53,93,168,0.35)] md:p-6"
                         role="dialog"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{titleText}</p>
-                        <p className="mt-3 text-base font-semibold leading-7 text-slate-900">{dialog.message}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#7e91ba]">{titleText}</p>
+                        <p className="mt-3 text-base font-semibold leading-7 text-[#27498c]">{dialog.message}</p>
 
                         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                             <button className={`${ui.secondaryButton} min-h-11`} onClick={() => closeDialog(false)} type="button">

@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AdminProctoringController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CuratorQuestionController;
+use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\QuestionImageController;
 use App\Http\Controllers\Api\StudentExamController;
 use App\Http\Controllers\Api\StudentProctoringController;
@@ -17,6 +18,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/enroll', [AuthController::class, 'enroll'])->middleware('role:student');
+    Route::get('/feedback', [FeedbackController::class, 'index']);
+    Route::post('/feedback', [FeedbackController::class, 'store'])->middleware('role:student,curator');
+    Route::patch('/feedback/{feedback}/reply', [FeedbackController::class, 'reply'])->middleware('role:admin');
 
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('/olympiads', [AdminController::class, 'olympiads']);

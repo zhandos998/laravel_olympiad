@@ -2,6 +2,17 @@
 @import "tailwindcss";
 
 @layer base {
+    :root {
+        --brand-accent: #bfd0f4;
+        --brand-accent-soft: #eef3ff;
+        --brand-accent-pale: #f7f9ff;
+        --brand-blue: #355da8;
+        --brand-blue-strong: #27498c;
+        --brand-blue-soft: #d7e3fb;
+        --brand-blue-pale: #eef3ff;
+        --brand-white: #ffffff;
+    }
+
     html,
     body,
     #root {
@@ -10,7 +21,117 @@
 
     body {
         font-family: 'Manrope', 'Segoe UI', Tahoma, sans-serif;
+        background: var(--brand-white);
+        color: var(--brand-blue);
     }
+}
+
+.text-slate-900 {
+    color: var(--brand-blue-strong) !important;
+}
+
+.text-slate-700,
+.text-teal-700,
+.text-teal-800,
+.text-amber-700,
+.text-amber-900,
+.text-emerald-700,
+.text-emerald-800,
+.text-emerald-900,
+.text-sky-700,
+.text-sky-900,
+.text-rose-600,
+.text-rose-700,
+.text-rose-900 {
+    color: var(--brand-blue) !important;
+}
+
+.text-slate-600 {
+    color: #5573b2 !important;
+}
+
+.text-slate-500 {
+    color: #7086b7 !important;
+}
+
+.text-slate-400 {
+    color: #93a5cb !important;
+}
+
+.text-slate-300 {
+    color: #c2cde3 !important;
+}
+
+.bg-slate-50,
+.bg-teal-50,
+.bg-amber-50,
+.bg-emerald-50,
+.bg-sky-50,
+.bg-rose-50,
+.bg-cyan-50 {
+    background-color: var(--brand-accent-pale) !important;
+}
+
+.bg-slate-100,
+.bg-teal-100,
+.bg-amber-100,
+.bg-emerald-100 {
+    background-color: var(--brand-accent-soft) !important;
+}
+
+.bg-slate-200 {
+    background-color: #dfe8fb !important;
+}
+
+.bg-slate-900,
+.bg-slate-950,
+.bg-teal-600,
+.bg-teal-700,
+.bg-teal-500 {
+    background-color: var(--brand-blue) !important;
+}
+
+.border-slate-200,
+.border-sky-200 {
+    border-color: var(--brand-blue-soft) !important;
+}
+
+.border-slate-300 {
+    border-color: #bfd0f4 !important;
+}
+
+.border-teal-200,
+.border-teal-300,
+.border-teal-400,
+.border-teal-500,
+.border-teal-600,
+.border-amber-200,
+.border-emerald-200,
+.border-emerald-300,
+.border-rose-200 {
+    border-color: var(--brand-accent) !important;
+}
+
+.hover\:border-slate-300:hover,
+.hover\:border-teal-300:hover {
+    border-color: var(--brand-accent) !important;
+}
+
+.hover\:bg-slate-50:hover {
+    background-color: var(--brand-accent-pale) !important;
+}
+
+.hover\:bg-slate-200:hover {
+    background-color: #dfe8fb !important;
+}
+
+.hover\:bg-slate-800:hover {
+    background-color: var(--brand-blue-strong) !important;
+}
+
+.hover\:text-teal-700:hover,
+.hover\:text-teal-800:hover {
+    color: var(--brand-blue) !important;
 }
 
 .wrs_modal_dialogContainer.wrs_modal_desktop {

@@ -9,8 +9,11 @@ import { useLocale } from './context/LocaleContext';
 import { defaultHomePath } from './lib/navigation';
 import { AdminPage } from './pages/AdminPage';
 import { AdminOlympiadPage } from './pages/AdminOlympiadPage';
+import { AdminOlympiadSettingsPage } from './pages/AdminOlympiadSettingsPage';
+import { AdminOlympiadSubjectsPage } from './pages/AdminOlympiadSubjectsPage';
 import { CuratorPage } from './pages/CuratorPage';
 import { CuratorSubjectQuestionsPage } from './pages/CuratorSubjectQuestionsPage';
+import { FeedbackPage } from './pages/FeedbackPage';
 import { LoginPage } from './pages/LoginPage';
 import { StudentPage } from './pages/StudentPage';
 import { StudentOlympiadPage } from './pages/StudentOlympiadPage';
@@ -29,20 +32,20 @@ export default function MainApp() {
     }, [t]);
 
     return (
-        <div className="flex min-h-screen flex-col bg-gradient-to-br from-cyan-50 via-white to-amber-50 text-slate-900">
+        <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top_left,_#eef4ff,_#ffffff_45%,_#f5f8ff_100%)] text-[#355da8]">
             <NotificationToast />
             <AppHeader user={user} onLogout={signOut} />
 
             <main className="grid w-full flex-1 gap-5 px-4 py-6 md:px-6 md:py-8">
                 {error && (
-                    <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                    <p className="rounded-xl border border-[#bfd0f4] bg-[#f7f9ff] px-4 py-3 text-sm font-semibold text-[#355da8]">
                         {error}
                     </p>
                 )}
 
                 <Suspense
                     fallback={
-                        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                        <div className="rounded-xl border border-[#d7e3fb] bg-white px-4 py-3 text-sm text-[#355da8]">
                             {t('common.loading')}
                         </div>
                     }
@@ -75,6 +78,14 @@ export default function MainApp() {
                             }
                         />
                         <Route
+                            path="/feedback"
+                            element={
+                                <ProtectedRoute allow={['student', 'curator', 'admin']}>
+                                    <FeedbackPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
                             path="/admin"
                             element={
                                 <ProtectedRoute allow={['admin']}>
@@ -86,7 +97,7 @@ export default function MainApp() {
                             path="/admin/olympiads/:olympiadId/settings"
                             element={
                                 <ProtectedRoute allow={['admin']}>
-                                    <AdminOlympiadPage />
+                                    <AdminOlympiadSettingsPage />
                                 </ProtectedRoute>
                             }
                         />
@@ -94,7 +105,7 @@ export default function MainApp() {
                             path="/admin/olympiads/:olympiadId/subjects"
                             element={
                                 <ProtectedRoute allow={['admin']}>
-                                    <AdminOlympiadPage />
+                                    <AdminOlympiadSubjectsPage />
                                 </ProtectedRoute>
                             }
                         />

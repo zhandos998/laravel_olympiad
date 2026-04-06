@@ -48,6 +48,8 @@ class StudentExamController extends Controller
                     'title' => $olympiad->title,
                     'description' => $olympiad->description,
                     'registration_open' => $olympiad->registration_open,
+                    'stage2_starts_at' => $olympiad->stage2_starts_at,
+                    'stage2_ends_at' => $olympiad->stage2_ends_at,
                     'subjects' => $subjects->map(fn (Subject $subject) => [
                         'id' => $subject->id,
                         'name' => $subject->name,
@@ -77,6 +79,11 @@ class StudentExamController extends Controller
             ->whereIn('subject_id', $subjects->pluck('id'))
             ->get()
             ->keyBy('subject_id');
+        $stageTwoSessions = StageTwoSession::query()
+            ->where('olympiad_registration_id', $registration->id)
+            ->whereIn('subject_id', $subjects->pluck('id'))
+            ->get()
+            ->keyBy('subject_id');
 
         return response()->json([
             'olympiad' => [
@@ -87,6 +94,8 @@ class StudentExamController extends Controller
                 'stage1_question_count' => $olympiad->stage1_question_count,
                 'stage1_duration_minutes' => $olympiad->stage1_duration_minutes,
                 'stage1_pass_percent' => $olympiad->stage1_pass_percent,
+                'stage2_starts_at' => $olympiad->stage2_starts_at,
+                'stage2_ends_at' => $olympiad->stage2_ends_at,
             ],
             'registration' => [
                 'id' => $registration->id,
@@ -97,9 +106,12 @@ class StudentExamController extends Controller
                 'test_language' => $registration->test_language,
                 'profile_subjects' => $registration->profile_subjects,
             ],
-            'subjects' => $subjects->map(function (Subject $subject) use ($attempts, $olympiad) {
+            'subjects' => $subjects->map(function (Subject $subject) use ($attempts, $olympiad, $stageTwoSessions) {
                 /** @var StageAttempt|null $attempt */
                 $attempt = $attempts->get($subject->id);
+                /** @var StageTwoSession|null $stageTwoSession */
+                $stageTwoSession = $stageTwoSessions->get($subject->id);
+                $isEligibleForStageTwo = (bool) $attempt?->is_passed;
 
                 return [
                     'id' => $subject->id,
@@ -118,6 +130,14 @@ class StudentExamController extends Controller
                         'started_at' => $attempt->started_at,
                         'submitted_at' => $attempt->submitted_at,
                     ] : null,
+                    'stage2' => [
+                        'eligible' => $isEligibleForStageTwo,
+                        'status' => $stageTwoSession?->status,
+                        'meeting_link' => $stageTwoSession?->meeting_link ?: $subject->stage2_link,
+                        'score_percent' => $stageTwoSession?->score_percent,
+                        'starts_at' => $subject->stage2_start_at ?: $olympiad->stage2_starts_at,
+                        'ends_at' => $subject->stage2_end_at ?: $olympiad->stage2_ends_at,
+                    ],
                 ];
             })->values(),
         ]);

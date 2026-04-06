@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\AssembleProctoringRecording;
 use App\Models\Olympiad;
 use App\Models\OlympiadRegistration;
 use App\Models\ProctoringChunk;
 use App\Models\ProctoringSession;
-use App\Services\ProctoringRecordingAssembler;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -111,21 +111,42 @@ class StudentProctoringController extends Controller
         ]);
     }
 
-    public function finish(Request $request, ProctoringSession $session, ProctoringRecordingAssembler $assembler)
+    public function finish(Request $request, ProctoringSession $session)
     {
         $this->ensureOwnedByUser($request, $session);
 
+        $combinedChunksCount = $session->chunks()->where('kind', 'combined')->count();
+        $currentAssemblyStatus = $session->assembly_status ?: ProctoringSession::ASSEMBLY_PENDING;
+        $shouldQueueAssembly = false;
+
         if (!$session->finished_at) {
-            $session->update([
+            $session->forceFill([
                 'status' => 'finished',
                 'finished_at' => now(),
-            ]);
+            ])->save();
         }
 
-        try {
-            $assembler->assemble($session->fresh(['chunks', 'recordings']));
-        } catch (\Throwable $exception) {
-            report($exception);
+        if ($combinedChunksCount === 0) {
+            $session->forceFill([
+                'assembly_status' => ProctoringSession::ASSEMBLY_EMPTY,
+                'assembly_error' => null,
+                'assembly_completed_at' => now(),
+            ])->save();
+        } elseif (
+            !in_array($currentAssemblyStatus, [ProctoringSession::ASSEMBLY_READY, ProctoringSession::ASSEMBLY_QUEUED, ProctoringSession::ASSEMBLY_PROCESSING], true)
+        ) {
+            $session->forceFill([
+                'assembly_status' => ProctoringSession::ASSEMBLY_QUEUED,
+                'assembly_error' => null,
+                'assembly_requested_at' => now(),
+                'assembly_completed_at' => null,
+            ])->save();
+
+            $shouldQueueAssembly = true;
+        }
+
+        if ($shouldQueueAssembly) {
+            AssembleProctoringRecording::dispatch($session->id);
         }
 
         $session->load('recordings');
@@ -134,7 +155,8 @@ class StudentProctoringController extends Controller
             'session_id' => $session->id,
             'status' => $session->status,
             'finished_at' => $session->finished_at,
-            'combined_chunks_count' => $session->chunks()->where('kind', 'combined')->count(),
+            'assembly_status' => $session->assembly_status,
+            'combined_chunks_count' => $combinedChunksCount,
             'combined_recording_available' => (bool) $session->recordings->firstWhere('kind', 'combined'),
         ]);
     }

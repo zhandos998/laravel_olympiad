@@ -444,7 +444,7 @@ export function StudentOlympiadTestingPage() {
     return (
         <section className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-start">
             <aside className="grid gap-4 xl:sticky xl:top-4">
-                <div className="overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-teal-100 via-cyan-50 to-slate-100 p-4 text-slate-950 shadow-[0_24px_60px_-28px_rgba(15,23,42,0.22)]">
+                <div className="overflow-hidden rounded-[1.5rem] bg-[linear-gradient(145deg,_#eef4ff_0%,_#ffffff_52%,_#edf3ff_100%)] p-4 text-slate-950 shadow-[0_24px_60px_-28px_rgba(53,93,168,0.22)]">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{copy.timeLeft}</p>
@@ -462,7 +462,7 @@ export function StudentOlympiadTestingPage() {
                     </div>
 
                     <button
-                        className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-black shadow-lg shadow-red-900/15 transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-70"
+                        className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-[#27498c] px-4 py-2.5 text-sm font-bold text-white shadow-[0_18px_38px_-20px_rgba(53,93,168,0.32)] transition hover:bg-[#1f3c75] disabled:cursor-not-allowed disabled:opacity-70"
                         disabled={isFinishing}
                         onClick={finishOlympiad}
                         type="button"

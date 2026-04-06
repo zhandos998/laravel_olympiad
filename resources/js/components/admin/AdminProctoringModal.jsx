@@ -4,43 +4,56 @@ import { api } from '../../lib/api';
 import { DEFAULT_LOCALE, LOCALE_KEY } from '../../constants/locale';
 import { formatDate } from './adminOlympiadUtils';
 
+const EMPTY_MEDIA_STATE = {
+    mode: 'empty',
+    recordingUrl: '',
+    chunkUrls: [],
+    currentIndex: 0,
+    loading: false,
+    error: '',
+};
+
 function buildText(locale) {
     if (locale === 'kaz') {
         return {
-            eyebrow: 'Прокторинг',
-            title: 'Қатысушы жазбалары',
-            loading: 'Прокторинг жазбалары жүктелуде...',
-            empty: 'Бұл қатысушы бойынша прокторинг жазбасы табылмады.',
-            close: 'Жабу',
-            session: 'Тур',
-            startedAt: 'Басталған уақыт',
-            finishedAt: 'Аяқталған уақыт',
-            combined: 'Біріктірілген жазба',
-            noRecording: 'Жазба әлі жиналмаған.',
-            participant: 'Қатысушы',
-            loadingRecording: 'Жазба жүктелуде...',
-            downloadFailed: 'Жазбаны жүктеу мүмкін болмады.',
-            segment: 'Бөлік',
-            segments: 'Бөліктер',
+            eyebrow: 'РџСЂРѕРєС‚РѕСЂРёРЅРі',
+            title: 'ТљР°С‚С‹СЃСѓС€С‹ Р¶Р°Р·Р±Р°Р»Р°СЂС‹',
+            loading: 'РџСЂРѕРєС‚РѕСЂРёРЅРі Р¶Р°Р·Р±Р°Р»Р°СЂС‹ Р¶ТЇРєС‚РµР»СѓРґРµ...',
+            empty: 'Р‘Т±Р» Т›Р°С‚С‹СЃСѓС€С‹ Р±РѕР№С‹РЅС€Р° РїСЂРѕРєС‚РѕСЂРёРЅРі Р¶Р°Р·Р±Р°СЃС‹ С‚Р°Р±С‹Р»РјР°РґС‹.',
+            close: 'Р–Р°Р±Сѓ',
+            session: 'РўСѓСЂ',
+            startedAt: 'Р‘Р°СЃС‚Р°Р»Т“Р°РЅ СѓР°Т›С‹С‚',
+            finishedAt: 'РђСЏТ›С‚Р°Р»Т“Р°РЅ СѓР°Т›С‹С‚',
+            combined: 'Р‘С–СЂС–РєС‚С–СЂС–Р»РіРµРЅ Р¶Р°Р·Р±Р°',
+            noRecording: 'Р–Р°Р·Р±Р° У™Р»С– Р¶РёРЅР°Р»РјР°Т“Р°РЅ.',
+            assembling: '\u0416\u0430\u0437\u0431\u0430 \u049b\u0430\u0437\u0456\u0440 \u0436\u0438\u043d\u0430\u043b\u044b\u043f \u0436\u0430\u0442\u044b\u0440.',
+            assemblyFailed: '\u0416\u0430\u0437\u0431\u0430\u043d\u044b \u0436\u0438\u043d\u0430\u0443 \u0441\u04d9\u0442\u0441\u0456\u0437 \u0430\u044f\u049b\u0442\u0430\u043b\u0434\u044b.',
+            participant: 'ТљР°С‚С‹СЃСѓС€С‹',
+            loadingRecording: 'Р–Р°Р·Р±Р° Р¶ТЇРєС‚РµР»СѓРґРµ...',
+            downloadFailed: 'Р–Р°Р·Р±Р°РЅС‹ Р¶ТЇРєС‚РµСѓ РјТЇРјРєС–РЅ Р±РѕР»РјР°РґС‹.',
+            segment: 'Р‘У©Р»С–Рє',
+            segments: 'Р‘У©Р»С–РєС‚РµСЂ',
         };
     }
 
     return {
-        eyebrow: 'Прокторинг',
-        title: 'Записи участника',
-        loading: 'Записи прокторинга загружаются...',
-        empty: 'Для этого участника записей прокторинга пока нет.',
-        close: 'Закрыть',
-        session: 'Тур',
-        startedAt: 'Начало',
-        finishedAt: 'Завершение',
-        combined: 'Общая запись',
-        noRecording: 'Итоговая запись пока не собрана.',
-        participant: 'Участник',
-        loadingRecording: 'Запись загружается...',
-        downloadFailed: 'Не удалось загрузить запись.',
-        segment: 'Сегмент',
-        segments: 'Сегменты',
+        eyebrow: 'РџСЂРѕРєС‚РѕСЂРёРЅРі',
+        title: 'Р—Р°РїРёСЃРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ',
+        loading: 'Р—Р°РїРёСЃРё РїСЂРѕРєС‚РѕСЂРёРЅРіР° Р·Р°РіСЂСѓР¶Р°СЋС‚СЃСЏ...',
+        empty: 'Р”Р»СЏ СЌС‚РѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ Р·Р°РїРёСЃРµР№ РїСЂРѕРєС‚РѕСЂРёРЅРіР° РїРѕРєР° РЅРµС‚.',
+        close: 'Р—Р°РєСЂС‹С‚СЊ',
+        session: 'РўСѓСЂ',
+        startedAt: 'РќР°С‡Р°Р»Рѕ',
+        finishedAt: 'Р—Р°РІРµСЂС€РµРЅРёРµ',
+        combined: 'РћР±С‰Р°СЏ Р·Р°РїРёСЃСЊ',
+        noRecording: 'РС‚РѕРіРѕРІР°СЏ Р·Р°РїРёСЃСЊ РїРѕРєР° РЅРµ СЃРѕР±СЂР°РЅР°.',
+        assembling: '\u0418\u0442\u043e\u0433\u043e\u0432\u0430\u044f \u0437\u0430\u043f\u0438\u0441\u044c \u0441\u0435\u0439\u0447\u0430\u0441 \u0441\u043e\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044f.',
+        assemblyFailed: '\u0421\u0431\u043e\u0440\u043a\u0430 \u0438\u0442\u043e\u0433\u043e\u0432\u043e\u0439 \u0437\u0430\u043f\u0438\u0441\u0438 \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u043b\u0430\u0441\u044c \u0441 \u043e\u0448\u0438\u0431\u043a\u043e\u0439.',
+        participant: 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ',
+        loadingRecording: 'Р—Р°РїРёСЃСЊ Р·Р°РіСЂСѓР¶Р°РµС‚СЃСЏ...',
+        downloadFailed: 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ Р·Р°РїРёСЃСЊ.',
+        segment: 'РЎРµРіРјРµРЅС‚',
+        segments: 'РЎРµРіРјРµРЅС‚С‹',
     };
 }
 
@@ -50,14 +63,7 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [selectedSessionId, setSelectedSessionId] = useState(null);
-    const [mediaState, setMediaState] = useState({
-        mode: 'empty',
-        recordingUrl: '',
-        chunkUrls: [],
-        currentIndex: 0,
-        loading: false,
-        error: '',
-    });
+    const [mediaState, setMediaState] = useState(EMPTY_MEDIA_STATE);
 
     useEffect(() => {
         if (!open || !registrationId) {
@@ -101,6 +107,14 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
     const selectedSession = data?.sessions?.find((session) => session.id === selectedSessionId) ?? data?.sessions?.[0] ?? null;
     const combinedChunks = selectedSession?.combined_chunks ?? [];
     const combinedRecording = selectedSession?.combined_recording ?? null;
+    const isAssemblyInProgress = selectedSession?.assembly_status === 'queued' || selectedSession?.assembly_status === 'processing';
+    const recordingPlaceholderText = isAssemblyInProgress
+        ? text.assembling
+        : selectedSession?.assembly_status === 'failed'
+          ? selectedSession?.assembly_error || text.assemblyFailed
+          : text.noRecording;
+    const combinedChunkMediaUrlsKey = useMemo(() => combinedChunks.map((chunk) => chunk.media_url ?? '').join('|'), [combinedChunks]);
+    const combinedRecordingMediaUrl = combinedRecording?.media_url ?? '';
 
     useEffect(() => {
         if (!open || !selectedSession || !token) {
@@ -111,14 +125,18 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
 
                 current.chunkUrls.forEach((url) => URL.revokeObjectURL(url));
 
-                return {
-                    mode: 'empty',
-                    recordingUrl: '',
-                    chunkUrls: [],
-                    currentIndex: 0,
-                    loading: false,
-                    error: '',
-                };
+                if (
+                    current.mode === EMPTY_MEDIA_STATE.mode &&
+                    current.recordingUrl === EMPTY_MEDIA_STATE.recordingUrl &&
+                    current.chunkUrls.length === 0 &&
+                    current.currentIndex === EMPTY_MEDIA_STATE.currentIndex &&
+                    current.loading === EMPTY_MEDIA_STATE.loading &&
+                    current.error === EMPTY_MEDIA_STATE.error
+                ) {
+                    return current;
+                }
+
+                return EMPTY_MEDIA_STATE;
             });
 
             return;
@@ -164,25 +182,20 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
 
                 nextRecordingUrl = URL.createObjectURL(await response.blob());
                 setMediaState({
+                    ...EMPTY_MEDIA_STATE,
                     mode: 'recording',
                     recordingUrl: nextRecordingUrl,
-                    chunkUrls: [],
-                    currentIndex: 0,
-                    loading: false,
-                    error: '',
                 });
                 return;
             }
 
+            if (isAssemblyInProgress) {
+                setMediaState(EMPTY_MEDIA_STATE);
+                return;
+            }
+
             if (combinedChunks.length === 0) {
-                setMediaState({
-                    mode: 'empty',
-                    recordingUrl: '',
-                    chunkUrls: [],
-                    currentIndex: 0,
-                    loading: false,
-                    error: '',
-                });
+                setMediaState(EMPTY_MEDIA_STATE);
                 return;
             }
 
@@ -211,12 +224,9 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
 
             nextChunkUrls = blobs.map((blob) => URL.createObjectURL(blob));
             setMediaState({
+                ...EMPTY_MEDIA_STATE,
                 mode: 'segments',
-                recordingUrl: '',
                 chunkUrls: nextChunkUrls,
-                currentIndex: 0,
-                loading: false,
-                error: '',
             });
         };
 
@@ -226,11 +236,7 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
             }
 
             setMediaState({
-                mode: 'empty',
-                recordingUrl: '',
-                chunkUrls: [],
-                currentIndex: 0,
-                loading: false,
+                ...EMPTY_MEDIA_STATE,
                 error: nextError.message || text.downloadFailed,
             });
         });
@@ -244,7 +250,7 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
 
             nextChunkUrls.forEach((url) => URL.revokeObjectURL(url));
         };
-    }, [open, selectedSession?.id, token, text.downloadFailed, combinedChunks, combinedRecording?.available, combinedRecording?.media_url]);
+    }, [open, selectedSession?.id, token, text.downloadFailed, combinedChunkMediaUrlsKey, combinedRecording?.available, combinedRecordingMediaUrl, isAssemblyInProgress]);
 
     if (!open) {
         return null;
@@ -292,7 +298,11 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
                                 </p>
                                 <div className="mt-2 flex flex-wrap gap-1">
                                     <span className="rounded-full bg-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700">
-                                        {session.combined_recording?.available ? text.combined : `${text.segments}: ${session.combined_chunks?.length ?? 0}`}
+                                        {session.combined_recording?.available
+                                            ? text.combined
+                                            : session.assembly_status === 'queued' || session.assembly_status === 'processing'
+                                              ? text.assembling
+                                              : `${text.segments}: ${session.combined_chunks?.length ?? 0}`}
                                     </span>
                                 </div>
                             </button>
@@ -340,7 +350,7 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
                                     />
                                 ) : (
                                     <div className="flex min-h-56 items-center justify-center rounded-2xl border border-dashed border-slate-700 text-sm text-slate-300">
-                                        {text.noRecording}
+                                        {recordingPlaceholderText}
                                     </div>
                                 )}
                             </div>
@@ -358,7 +368,13 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
                                 </div>
 
                                 <p className="mt-4 text-sm text-slate-600">
-                                    {combinedRecording?.available ? text.combined : combinedChunks.length > 0 ? `${text.segments}: ${combinedChunks.length}` : text.noRecording}
+                                    {combinedRecording?.available
+                                        ? text.combined
+                                        : isAssemblyInProgress
+                                          ? text.assembling
+                                          : combinedChunks.length > 0
+                                            ? `${text.segments}: ${combinedChunks.length}`
+                                            : recordingPlaceholderText}
                                 </p>
                             </div>
                         </>
