@@ -126,3 +126,30 @@ Open a shell in the app container:
 ```bash
 docker compose --env-file .env.docker exec app sh
 ```
+
+## 7. Connect from pgAdmin on your PC
+
+PostgreSQL is bound only to `127.0.0.1:5432` on the server host, so connect
+through an SSH tunnel instead of opening the database to the internet.
+
+Restart the database container after updating Compose:
+
+```bash
+docker compose --env-file .env.docker up -d postgres
+```
+
+Create an SSH tunnel from your PC:
+
+```bash
+ssh -L 5432:127.0.0.1:5432 <server-user>@<server-ip>
+```
+
+Then configure pgAdmin with:
+
+```text
+Host: 127.0.0.1
+Port: 5432
+Database: value of DB_DATABASE from .env.docker
+Username: value of DB_USERNAME from .env.docker
+Password: value of DB_PASSWORD from .env.docker
+```
