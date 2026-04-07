@@ -190,6 +190,69 @@ class SubjectStageOneQuestionCountTest extends TestCase
             ->assertJsonPath('questions.0.selected_option_id', $correctOption->id);
     }
 
+    public function test_student_stage_one_question_order_is_stable_after_page_reload(): void
+    {
+        $student = User::factory()->create(['role' => 'student']);
+        $olympiad = Olympiad::create([
+            'title' => 'Stable Order Olympiad',
+            'registration_open' => true,
+            'is_active' => true,
+            'stage1_question_count' => 3,
+            'stage1_pass_percent' => 70,
+        ]);
+        $subject = Subject::create([
+            'olympiad_id' => $olympiad->id,
+            'name' => 'Mathematics',
+            'stage1_question_count' => 3,
+        ]);
+
+        OlympiadRegistration::create([
+            'olympiad_id' => $olympiad->id,
+            'user_id' => $student->id,
+            'current_status' => 'registered',
+            'stage1_started_at' => now(),
+            'registered_at' => now(),
+        ]);
+
+        foreach (range(1, 3) as $questionIndex) {
+            $question = Question::create([
+                'subject_id' => $subject->id,
+                'text' => "Question {$questionIndex}",
+                'is_active' => true,
+            ]);
+
+            foreach (range(1, 4) as $optionIndex) {
+                QuestionOption::create([
+                    'question_id' => $question->id,
+                    'text' => "Question {$questionIndex} Option {$optionIndex}",
+                    'is_correct' => $optionIndex === 1,
+                ]);
+            }
+        }
+
+        Sanctum::actingAs($student);
+
+        $firstAttempt = $this->postJson("/api/student/subjects/{$subject->id}/stage-one/start")
+            ->assertOk()
+            ->json();
+
+        $secondAttempt = $this->postJson("/api/student/subjects/{$subject->id}/stage-one/start")
+            ->assertOk()
+            ->json();
+
+        $firstQuestionOrder = collect($firstAttempt['questions'])->pluck('question_id')->all();
+        $secondQuestionOrder = collect($secondAttempt['questions'])->pluck('question_id')->all();
+        $firstOptionSets = collect($firstAttempt['questions'])
+            ->map(fn (array $question) => collect($question['options'])->pluck('id')->sort()->values()->all())
+            ->all();
+        $secondOptionSets = collect($secondAttempt['questions'])
+            ->map(fn (array $question) => collect($question['options'])->pluck('id')->sort()->values()->all())
+            ->all();
+
+        $this->assertSame($firstQuestionOrder, $secondQuestionOrder);
+        $this->assertSame($firstOptionSets, $secondOptionSets);
+    }
+
     public function test_student_enrollment_requires_and_stores_language_and_profile_subjects(): void
     {
         $student = User::factory()->create([
@@ -825,6 +888,64 @@ class SubjectStageOneQuestionCountTest extends TestCase
         $this->get("/api/admin/proctoring-recordings/{$recording->id}/media")
             ->assertOk()
             ->assertHeader('content-type', 'video/webm');
+    }
+
+    public function test_admin_opening_finished_session_without_final_recording_queues_assembly(): void
+    {
+        Storage::fake('local');
+        Queue::fake();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $student = User::factory()->create(['role' => 'student']);
+        $olympiad = Olympiad::create([
+            'title' => 'Queued Recording Olympiad',
+            'stage1_question_count' => 25,
+            'stage1_pass_percent' => 70,
+        ]);
+        $registration = OlympiadRegistration::create([
+            'olympiad_id' => $olympiad->id,
+            'user_id' => $student->id,
+            'current_status' => 'registered',
+            'registered_at' => now(),
+            'stage1_started_at' => now(),
+        ]);
+        $session = ProctoringSession::create([
+            'olympiad_registration_id' => $registration->id,
+            'stage' => 1,
+            'status' => 'finished',
+            'assembly_status' => ProctoringSession::ASSEMBLY_PENDING,
+            'started_at' => now()->subMinutes(20),
+            'finished_at' => now()->subMinutes(10),
+        ]);
+
+        Storage::disk('local')->put('proctoring/test-combined-queued-000001.webm', 'fake-webm-data');
+
+        ProctoringChunk::create([
+            'proctoring_session_id' => $session->id,
+            'kind' => 'combined',
+            'sequence' => 0,
+            'disk' => 'local',
+            'path' => 'proctoring/test-combined-queued-000001.webm',
+            'mime_type' => 'video/webm',
+            'size_bytes' => 14,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson("/api/admin/olympiads/{$olympiad->id}/registrations/{$registration->id}/proctoring")
+            ->assertOk()
+            ->assertJsonPath('sessions.0.id', $session->id)
+            ->assertJsonPath('sessions.0.assembly_status', ProctoringSession::ASSEMBLY_QUEUED)
+            ->assertJsonPath('sessions.0.combined_recording.available', false);
+
+        Queue::assertPushed(AssembleProctoringRecording::class, function (AssembleProctoringRecording $job) use ($session) {
+            return $job->sessionId === $session->id;
+        });
+
+        $this->assertDatabaseHas('proctoring_sessions', [
+            'id' => $session->id,
+            'assembly_status' => ProctoringSession::ASSEMBLY_QUEUED,
+        ]);
     }
 
     public function test_admin_can_archive_olympiad_and_subject(): void

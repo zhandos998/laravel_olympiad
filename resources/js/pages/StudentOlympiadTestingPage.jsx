@@ -45,7 +45,6 @@ export function StudentOlympiadTestingPage() {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [now, setNow] = useState(Date.now());
     const [isFinishing, setIsFinishing] = useState(false);
-    const [isSubmittingSubject, setIsSubmittingSubject] = useState(false);
     const webcamPreviewRef = useRef(null);
 
     const copy = useMemo(() => {
@@ -55,10 +54,9 @@ export function StudentOlympiadTestingPage() {
                     "\u0422\u0435\u0441\u0442\u0456\u043b\u0435\u0443\u0434\u0456 \u0430\u044f\u049b\u0442\u0430\u0443",
                 previous: "\u0410\u043b\u0434\u044b\u04a3\u0493\u044b",
                 next: "\u041a\u0435\u043b\u0435\u0441\u0456",
+                nextSubject: "\u041a\u0435\u043b\u0435\u0441\u0456",
                 finishSubject:
                     "\u041f\u04d9\u043d\u0434\u0456 \u0430\u044f\u049b\u0442\u0430\u0443",
-                finishAndNextSubject:
-                    "\u041f\u04d9\u043d\u0434\u0456 \u0430\u044f\u049b\u0442\u0430\u043f, \u043a\u0435\u043b\u0435\u0441\u0456 \u043f\u04d9\u043d\u0433\u0435 \u04e9\u0442\u0443",
                 subjectDone:
                     "\u041f\u04d9\u043d \u0430\u044f\u049b\u0442\u0430\u043b\u0434\u044b",
                 answered:
@@ -99,10 +97,9 @@ export function StudentOlympiadTestingPage() {
                 "\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u0442\u0435\u0441\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435",
             previous: "\u041d\u0430\u0437\u0430\u0434",
             next: "\u0414\u0430\u043b\u0435\u0435",
+            nextSubject: "\u0414\u0430\u043b\u0435\u0435",
             finishSubject:
                 "\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u043f\u0440\u0435\u0434\u043c\u0435\u0442",
-            finishAndNextSubject:
-                "\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u043f\u0440\u0435\u0434\u043c\u0435\u0442 \u0438 \u043f\u0435\u0440\u0435\u0439\u0442\u0438 \u043a \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u043c\u0443",
             subjectDone:
                 "\u041f\u0440\u0435\u0434\u043c\u0435\u0442 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d",
             answered: "\u041e\u0442\u0432\u0435\u0447\u0435\u043d\u043e",
@@ -297,7 +294,7 @@ export function StudentOlympiadTestingPage() {
         subject.stage1_question_count ??
         0;
 
-    const getNextIncompleteSubject = (subjectId, sourceData = data) => {
+    const getNextSubjectInOrder = (subjectId, sourceData = data) => {
         if (!sourceData?.subjects?.length) {
             return null;
         }
@@ -308,23 +305,11 @@ export function StudentOlympiadTestingPage() {
             (subject) => String(subject.id) === normalizedSubjectId
         );
 
-        for (
-            let index = currentIndex + 1;
-            index < subjects.length;
-            index += 1
-        ) {
-            if (subjects[index].stage1_attempt?.status !== "completed") {
-                return subjects[index];
-            }
+        if (currentIndex < 0 || currentIndex >= subjects.length - 1) {
+            return null;
         }
 
-        return (
-            subjects.find(
-                (subject) =>
-                    String(subject.id) !== normalizedSubjectId &&
-                    subject.stage1_attempt?.status !== "completed"
-            ) ?? null
-        );
+        return subjects[currentIndex + 1] ?? null;
     };
 
     const getAnswerLetter = (subjectId, question) => {
@@ -359,18 +344,24 @@ export function StudentOlympiadTestingPage() {
         await loadSubjectAttempt(subjectId, questionIndex);
     };
 
-    const finishActiveSubject = async () => {
-        if (!activeSubjectId || isSubmittingSubject || isFinishing) {
+    const goToNextStep = async () => {
+        if (!activeAttempt) {
             return;
         }
 
-        setIsSubmittingSubject(true);
-
-        try {
-            await submitSubject(activeSubjectId);
-        } finally {
-            setIsSubmittingSubject(false);
+        if (currentQuestionIndex < activeAttempt.questions.length - 1) {
+            setCurrentQuestionIndex((previous) => previous + 1);
+            return;
         }
+
+        const nextSubject = getNextSubjectInOrder(activeSubjectId);
+
+        if (nextSubject) {
+            await openSubjectQuestion(nextSubject.id, 0);
+            return;
+        }
+
+        await finishOlympiad();
     };
 
     const updateAnswer = async (subjectId, questionId, optionId) => {
@@ -554,22 +545,16 @@ export function StudentOlympiadTestingPage() {
         }
     }
 
-    const goToNextQuestion = () => {
-        if (
-            activeAttempt &&
-            currentQuestionIndex < activeAttempt.questions.length - 1
-        ) {
-            setCurrentQuestionIndex((previous) => previous + 1);
-        }
-    };
-
     const goToPreviousQuestion = () => {
         if (currentQuestionIndex > 0) {
             setCurrentQuestionIndex((previous) => previous - 1);
         }
     };
 
-    const nextSubjectAfterActive = getNextIncompleteSubject(activeSubjectId);
+    const nextSubjectAfterActive = getNextSubjectInOrder(activeSubjectId);
+    const isLastQuestionOfActiveSubject =
+        Boolean(activeAttempt) &&
+        currentQuestionIndex === activeAttempt.questions.length - 1;
     const subjectNavigator = data ? (
         <div className="rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
@@ -917,11 +902,10 @@ export function StudentOlympiadTestingPage() {
                                     {copy.previous}
                                 </button>
 
-                                {currentQuestionIndex <
-                                activeAttempt.questions.length - 1 ? (
+                                {!isLastQuestionOfActiveSubject ? (
                                     <button
                                         className="inline-flex min-h-10 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
-                                        onClick={goToNextQuestion}
+                                        onClick={goToNextStep}
                                         type="button"
                                     >
                                         {copy.next}
@@ -929,15 +913,13 @@ export function StudentOlympiadTestingPage() {
                                 ) : (
                                     <button
                                         className="inline-flex min-h-10 items-center justify-center rounded-2xl bg-[#27498c] px-4 text-sm font-semibold text-white transition hover:bg-[#1f3c75] disabled:cursor-not-allowed disabled:opacity-60"
-                                        disabled={
-                                            isSubmittingSubject || isFinishing
-                                        }
-                                        onClick={finishActiveSubject}
+                                        disabled={isFinishing}
+                                        onClick={goToNextStep}
                                         type="button"
                                     >
                                         {nextSubjectAfterActive
-                                            ? copy.finishAndNextSubject
-                                            : copy.finishSubject}
+                                            ? copy.nextSubject
+                                            : copy.finishTesting}
                                     </button>
                                 )}
                             </div>

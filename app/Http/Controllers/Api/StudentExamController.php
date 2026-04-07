@@ -474,17 +474,20 @@ class StudentExamController extends Controller
             'started_at' => $startedAt,
             'duration_minutes' => $durationMinutes,
             'ends_at' => $startedAt?->copy()->addMinutes($durationMinutes),
-            'questions' => $attempt->answers->map(function (StageAttemptAnswer $answer) {
+            'questions' => $attempt->answers
+                ->sortBy('id')
+                ->values()
+                ->map(function (StageAttemptAnswer $answer) {
                 return [
                     'question_id' => $answer->question->id,
                     'text' => $answer->question->text,
                     'selected_option_id' => $answer->selected_option_id,
                     'options' => $answer->question->options
+                        ->shuffle()
                         ->map(fn ($option) => [
                             'id' => $option->id,
                             'text' => $option->text,
                         ])
-                        ->shuffle()
                         ->values(),
                 ];
             })->values(),

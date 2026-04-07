@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\AssembleProctoringRecording;
 use App\Models\Olympiad;
 use App\Models\OlympiadRegistration;
 use App\Models\ProctoringChunk;
 use App\Models\ProctoringRecording;
+use App\Models\ProctoringSession;
 use Illuminate\Support\Facades\Storage;
 
 class AdminProctoringController extends Controller
@@ -20,6 +22,10 @@ class AdminProctoringController extends Controller
             'proctoringSessions.chunks' => fn ($query) => $query->orderBy('kind')->orderBy('sequence'),
             'proctoringSessions.recordings' => fn ($query) => $query->orderBy('kind'),
         ]);
+
+        $registration->proctoringSessions->each(function (ProctoringSession $session) {
+            $this->ensureAssemblyQueued($session);
+        });
 
         return response()->json([
             'registration' => [
@@ -96,5 +102,30 @@ class AdminProctoringController extends Controller
             'Cache-Control' => 'private, max-age=3600',
             'Content-Disposition' => 'inline; filename="' . basename($recording->path) . '"',
         ]);
+    }
+
+    private function ensureAssemblyQueued(ProctoringSession $session): void
+    {
+        $hasCombinedChunks = $session->chunks->contains(fn (ProctoringChunk $chunk) => $chunk->kind === 'combined');
+        $hasCombinedRecording = $session->recordings->contains(fn (ProctoringRecording $recording) => $recording->kind === 'combined');
+        $assemblyStatus = $session->assembly_status ?: ProctoringSession::ASSEMBLY_PENDING;
+
+        if (
+            !$session->finished_at ||
+            !$hasCombinedChunks ||
+            $hasCombinedRecording ||
+            in_array($assemblyStatus, [ProctoringSession::ASSEMBLY_READY, ProctoringSession::ASSEMBLY_QUEUED, ProctoringSession::ASSEMBLY_PROCESSING], true)
+        ) {
+            return;
+        }
+
+        $session->forceFill([
+            'assembly_status' => ProctoringSession::ASSEMBLY_QUEUED,
+            'assembly_error' => null,
+            'assembly_requested_at' => now(),
+            'assembly_completed_at' => null,
+        ])->save();
+
+        AssembleProctoringRecording::dispatch($session->id);
     }
 }

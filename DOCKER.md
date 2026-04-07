@@ -40,6 +40,9 @@ If you want demo data:
 docker compose --env-file .env.docker exec app php artisan db:seed --force
 ```
 
+Telescope adds its own migration too, so after first install keep running the
+same migrate command against the current database.
+
 ## 4. Open the app
 
 By default:
@@ -107,7 +110,40 @@ docker compose --env-file .env.docker logs -f queue-worker
 
 This container is required for async proctoring assembly jobs.
 
-## 6. Useful commands
+## 6. Telescope
+
+Telescope is installed, but for Docker it is disabled by default in
+`.env.docker.example` to avoid extra overhead during peak exams.
+
+To enable it temporarily:
+
+```env
+TELESCOPE_ENABLED=true
+TELESCOPE_RECORD_ALL=true
+TELESCOPE_PATH=telescope
+TELESCOPE_ALLOWED_IPS=127.0.0.1,::1,<your-public-ip>/32
+```
+
+Then rebuild the PHP containers and run migrations:
+
+```bash
+docker compose --env-file .env.docker up -d --build app queue-worker
+docker compose --env-file .env.docker exec app php artisan migrate --force
+```
+
+Open:
+
+```text
+https://your-domain/telescope
+```
+
+To keep the Telescope tables under control, prune old entries periodically:
+
+```bash
+docker compose --env-file .env.docker exec app php artisan telescope:prune --hours=48
+```
+
+## 7. Useful commands
 
 Stop containers:
 
@@ -127,7 +163,7 @@ Open a shell in the app container:
 docker compose --env-file .env.docker exec app sh
 ```
 
-## 7. Connect from pgAdmin on your PC
+## 8. Connect from pgAdmin on your PC
 
 PostgreSQL is bound only to `127.0.0.1:5432` on the server host, so connect
 through an SSH tunnel instead of opening the database to the internet.

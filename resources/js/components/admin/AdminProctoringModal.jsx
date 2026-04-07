@@ -7,11 +7,11 @@ import { formatDate } from './adminOlympiadUtils';
 const EMPTY_MEDIA_STATE = {
     mode: 'empty',
     recordingUrl: '',
-    chunkUrls: [],
-    currentIndex: 0,
     loading: false,
     error: '',
 };
+
+const ASSEMBLY_PENDING_STATUSES = ['queued', 'processing'];
 
 function buildText(locale) {
     if (locale === 'kaz') {
@@ -25,14 +25,12 @@ function buildText(locale) {
             startedAt: 'Басталған уақыты',
             finishedAt: 'Аяқталған уақыты',
             combined: 'Біріктірілген жазба',
-            noRecording: 'Жазба әлі жиналған жоқ.',
-            assembling: 'Жазба қазір жиналып жатыр.',
-            assemblyFailed: 'Жазбаны жинау сәтсіз аяқталды.',
+            noRecording: 'Қорытынды жазба әлі жиналған жоқ.',
+            assembling: 'Қорытынды жазба қазір жиналып жатыр.',
+            assemblyFailed: 'Қорытынды жазбаны жинау сәтсіз аяқталды.',
             participant: 'Қатысушы',
             loadingRecording: 'Жазба жүктелуде...',
             downloadFailed: 'Жазбаны жүктеу мүмкін болмады.',
-            segment: 'Бөлік',
-            segments: 'Бөліктер',
         };
     }
 
@@ -52,8 +50,6 @@ function buildText(locale) {
         participant: 'Пользователь',
         loadingRecording: 'Запись загружается...',
         downloadFailed: 'Не удалось загрузить запись.',
-        segment: 'Сегмент',
-        segments: 'Сегменты',
     };
 }
 
@@ -75,45 +71,67 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
         }
 
         let cancelled = false;
-        setLoading(true);
-        setError('');
+        let timerId = null;
 
-        api(`/admin/olympiads/${olympiadId}/registrations/${registrationId}/proctoring`, { token })
-            .then((response) => {
+        const loadData = async (showLoader) => {
+            if (showLoader) {
+                setLoading(true);
+            }
+
+            try {
+                const response = await api(`/admin/olympiads/${olympiadId}/registrations/${registrationId}/proctoring`, { token });
+
                 if (cancelled) {
                     return;
                 }
 
+                setError('');
                 setData(response);
-                const firstSession = response.sessions?.[0] ?? null;
-                setSelectedSessionId(firstSession?.id ?? null);
-            })
-            .catch((nextError) => {
+                setSelectedSessionId((current) => {
+                    if (response.sessions?.some((session) => session.id === current)) {
+                        return current;
+                    }
+
+                    return response.sessions?.[0]?.id ?? null;
+                });
+
+                const hasPendingAssembly = response.sessions?.some((session) => ASSEMBLY_PENDING_STATUSES.includes(session.assembly_status));
+
+                if (hasPendingAssembly) {
+                    timerId = window.setTimeout(() => {
+                        loadData(false);
+                    }, 5000);
+                }
+            } catch (nextError) {
                 if (!cancelled) {
                     setError(nextError.message);
                 }
-            })
-            .finally(() => {
-                if (!cancelled) {
+            } finally {
+                if (!cancelled && showLoader) {
                     setLoading(false);
                 }
-            });
+            }
+        };
+
+        loadData(true);
 
         return () => {
             cancelled = true;
+
+            if (timerId) {
+                window.clearTimeout(timerId);
+            }
         };
     }, [open, registrationId, olympiadId, token]);
 
     const selectedSession = data?.sessions?.find((session) => session.id === selectedSessionId) ?? data?.sessions?.[0] ?? null;
-    const combinedChunks = selectedSession?.combined_chunks ?? [];
     const combinedRecording = selectedSession?.combined_recording ?? null;
-    const isAssemblyInProgress = selectedSession?.assembly_status === 'queued' || selectedSession?.assembly_status === 'processing';
+    const isAssemblyInProgress = ASSEMBLY_PENDING_STATUSES.includes(selectedSession?.assembly_status ?? '');
     const recordingPlaceholderText = isAssemblyInProgress
         ? text.assembling
         : selectedSession?.assembly_status === 'failed'
           ? selectedSession?.assembly_error || text.assemblyFailed
           : text.noRecording;
-    const combinedChunkMediaUrlsKey = useMemo(() => combinedChunks.map((chunk) => chunk.media_url ?? '').join('|'), [combinedChunks]);
     const combinedRecordingMediaUrl = combinedRecording?.media_url ?? '';
 
     useEffect(() => {
@@ -123,13 +141,30 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
                     URL.revokeObjectURL(current.recordingUrl);
                 }
 
-                current.chunkUrls.forEach((url) => URL.revokeObjectURL(url));
+                if (
+                    current.mode === EMPTY_MEDIA_STATE.mode &&
+                    current.recordingUrl === EMPTY_MEDIA_STATE.recordingUrl &&
+                    current.loading === EMPTY_MEDIA_STATE.loading &&
+                    current.error === EMPTY_MEDIA_STATE.error
+                ) {
+                    return current;
+                }
+
+                return EMPTY_MEDIA_STATE;
+            });
+
+            return;
+        }
+
+        if (!combinedRecording?.available || !combinedRecording.media_url) {
+            setMediaState((current) => {
+                if (current.recordingUrl) {
+                    URL.revokeObjectURL(current.recordingUrl);
+                }
 
                 if (
                     current.mode === EMPTY_MEDIA_STATE.mode &&
                     current.recordingUrl === EMPTY_MEDIA_STATE.recordingUrl &&
-                    current.chunkUrls.length === 0 &&
-                    current.currentIndex === EMPTY_MEDIA_STATE.currentIndex &&
                     current.loading === EMPTY_MEDIA_STATE.loading &&
                     current.error === EMPTY_MEDIA_STATE.error
                 ) {
@@ -144,37 +179,28 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
 
         const controller = new AbortController();
         let nextRecordingUrl = '';
-        let nextChunkUrls = [];
 
         setMediaState((current) => {
             if (current.recordingUrl) {
                 URL.revokeObjectURL(current.recordingUrl);
             }
 
-            current.chunkUrls.forEach((url) => URL.revokeObjectURL(url));
-
             return {
-                mode: 'empty',
-                recordingUrl: '',
-                chunkUrls: [],
-                currentIndex: 0,
+                ...EMPTY_MEDIA_STATE,
                 loading: true,
-                error: '',
             };
         });
 
         const requestLocale = localStorage.getItem(LOCALE_KEY) || DEFAULT_LOCALE;
 
-        const loadMedia = async () => {
-            if (combinedRecording?.available && combinedRecording.media_url) {
-                const response = await fetch(combinedRecording.media_url, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'X-Locale': requestLocale,
-                    },
-                    signal: controller.signal,
-                });
-
+        fetch(combinedRecording.media_url, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'X-Locale': requestLocale,
+            },
+            signal: controller.signal,
+        })
+            .then(async (response) => {
                 if (!response.ok) {
                     const payload = await response.json().catch(() => ({}));
                     throw new Error(payload.message || text.downloadFailed);
@@ -186,60 +212,17 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
                     mode: 'recording',
                     recordingUrl: nextRecordingUrl,
                 });
-                return;
-            }
+            })
+            .catch((nextError) => {
+                if (controller.signal.aborted) {
+                    return;
+                }
 
-            if (isAssemblyInProgress) {
-                setMediaState(EMPTY_MEDIA_STATE);
-                return;
-            }
-
-            if (combinedChunks.length === 0) {
-                setMediaState(EMPTY_MEDIA_STATE);
-                return;
-            }
-
-            const blobs = await Promise.all(
-                combinedChunks.map(async (chunk) => {
-                    const response = await fetch(chunk.media_url, {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            'X-Locale': requestLocale,
-                        },
-                        signal: controller.signal,
-                    });
-
-                    if (!response.ok) {
-                        const payload = await response.json().catch(() => ({}));
-                        throw new Error(payload.message || text.downloadFailed);
-                    }
-
-                    return response.blob();
-                }),
-            );
-
-            if (controller.signal.aborted) {
-                return;
-            }
-
-            nextChunkUrls = blobs.map((blob) => URL.createObjectURL(blob));
-            setMediaState({
-                ...EMPTY_MEDIA_STATE,
-                mode: 'segments',
-                chunkUrls: nextChunkUrls,
+                setMediaState({
+                    ...EMPTY_MEDIA_STATE,
+                    error: nextError.message || text.downloadFailed,
+                });
             });
-        };
-
-        loadMedia().catch((nextError) => {
-            if (controller.signal.aborted) {
-                return;
-            }
-
-            setMediaState({
-                ...EMPTY_MEDIA_STATE,
-                error: nextError.message || text.downloadFailed,
-            });
-        });
 
         return () => {
             controller.abort();
@@ -247,10 +230,8 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
             if (nextRecordingUrl) {
                 URL.revokeObjectURL(nextRecordingUrl);
             }
-
-            nextChunkUrls.forEach((url) => URL.revokeObjectURL(url));
         };
-    }, [open, selectedSession?.id, token, text.downloadFailed, combinedChunkMediaUrlsKey, combinedRecording?.available, combinedRecordingMediaUrl, isAssemblyInProgress]);
+    }, [open, selectedSession?.id, token, text.downloadFailed, combinedRecording?.available, combinedRecordingMediaUrl]);
 
     if (!open) {
         return null;
@@ -300,9 +281,11 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
                                     <span className="rounded-full bg-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700">
                                         {session.combined_recording?.available
                                             ? text.combined
-                                            : session.assembly_status === 'queued' || session.assembly_status === 'processing'
+                                            : ASSEMBLY_PENDING_STATUSES.includes(session.assembly_status)
                                               ? text.assembling
-                                              : `${text.segments}: ${session.combined_chunks?.length ?? 0}`}
+                                              : session.assembly_status === 'failed'
+                                                ? text.assemblyFailed
+                                                : text.noRecording}
                                     </span>
                                 </div>
                             </button>
@@ -328,26 +311,6 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
                                     </div>
                                 ) : mediaState.mode === 'recording' && mediaState.recordingUrl ? (
                                     <video autoPlay className="max-h-[52vh] w-full rounded-2xl bg-black" controls src={mediaState.recordingUrl} />
-                                ) : mediaState.chunkUrls.length > 0 ? (
-                                    <video
-                                        key={`${selectedSession.id}-${mediaState.currentIndex}`}
-                                        autoPlay
-                                        className="max-h-[52vh] w-full rounded-2xl bg-black"
-                                        controls
-                                        onEnded={() => {
-                                            setMediaState((current) => {
-                                                if (current.currentIndex >= current.chunkUrls.length - 1) {
-                                                    return current;
-                                                }
-
-                                                return {
-                                                    ...current,
-                                                    currentIndex: current.currentIndex + 1,
-                                                };
-                                            });
-                                        }}
-                                        src={mediaState.chunkUrls[mediaState.currentIndex]}
-                                    />
                                 ) : (
                                     <div className="flex min-h-56 items-center justify-center rounded-2xl border border-dashed border-slate-700 text-sm text-slate-300">
                                         {recordingPlaceholderText}
@@ -359,22 +322,12 @@ export function AdminProctoringModal({ open, olympiadId, registrationId, token, 
                                 <div className="flex items-center justify-between gap-3">
                                     <h4 className="text-lg font-bold text-slate-900">{text.combined}</h4>
                                     <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                                        {mediaState.mode === 'recording'
-                                            ? text.combined
-                                            : `${text.segment} ${Math.min(mediaState.currentIndex + 1, mediaState.chunkUrls.length || 1)} / ${
-                                                  mediaState.chunkUrls.length || combinedChunks.length || 0
-                                              }`}
+                                        {combinedRecording?.available ? text.combined : recordingPlaceholderText}
                                     </span>
                                 </div>
 
                                 <p className="mt-4 text-sm text-slate-600">
-                                    {combinedRecording?.available
-                                        ? text.combined
-                                        : isAssemblyInProgress
-                                          ? text.assembling
-                                          : combinedChunks.length > 0
-                                            ? `${text.segments}: ${combinedChunks.length}`
-                                            : recordingPlaceholderText}
+                                    {combinedRecording?.available ? text.combined : recordingPlaceholderText}
                                 </p>
                             </div>
                         </>
